@@ -6,8 +6,6 @@ import java.util.Vector;
 import java.util.Set;
 import java.util.HashSet;
 public class Peer {
-
-public class Peer{
     //Common.cfg
     int NumberOfPreferredNeighbors;
     int UnchokingInterval;
@@ -157,27 +155,7 @@ public class Peer{
         this.pieceSize = pieceSize;
     }
 
-    public void setPeerList(Vector<Peer> peerList) {
-        this.peerList = peerList;
-    }
-
-    // Helper Functions
-    public void sendMessage(byte[] message, ObjectOutputStream out) {
-        System.out.println("TEST");
-        try {
-            for (byte b : message) {
-                System.out.print(String.format("%02X ", b));
-            }
-            out.writeObject(message);
-            out.flush();
-        } catch (IOException e) {
-            System.out.println("IO Exception.");
-            e.printStackTrace();
-        }
-    }
-
     // TO DO
-    public boolean allHaveFile() {
         // find out if all Peers have downloaded full file
         // Vector of Peers and check that for all of them hasFile = 1
 
