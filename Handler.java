@@ -40,6 +40,8 @@ public class Handler
             int messageType = (int) incomingMsg[0];
        
             int receivedPeerID = ByteBuffer.wrap(incomingMsg, 1, 4).getInt();
+         
+         ;
 
             Message message = new Message(peer.getPeerID());
 
@@ -72,10 +74,12 @@ public class Handler
                     break;
 
                 case 3: //not interested
+                    System.out.println("Received a not interested message from peer: " + receivedPeerID);
                     if(peer.isPeerInterested(receivedPeerID)) {
                         peer.noLongerInterested(receivedPeerID);
                         temp = false;
                     }
+                    break;
 
                 case 4: //have
 
@@ -101,14 +105,21 @@ public class Handler
                 }
 
                 // check if the received bitfield form the other peer contains any new pieces
+                boolean interested = false;
                 for(int i = 5; i < incomingMsg.length; i++) {
                         if(bitfield[i - 5] == 0 && incomingMsg[i] == 1) {
                             System.out.println("Interested in piece");
                             byte[] interestedMessage = message.interestedMessage();
+                            interested = true;
                             os.write(interestedMessage);
                             os.flush();
                             break;
                         }
+                    }
+                    if(!interested) {
+                        byte[] notinterestedMessage = message.notinterestedMessage();
+                        os.write(notinterestedMessage);
+                        os.flush();
                     }
             
                 break;
