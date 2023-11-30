@@ -6,8 +6,10 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Hashtable;
+import java.util.Set;
 import java.util.Vector;
-
+import java.util.Set;
+import java.util.HashSet;
 public class Peer {
 
     // Common.cfg
@@ -27,6 +29,7 @@ public class Peer {
     // Other needed Peer variables
     private byte[] bitfield;
     Vector<Pair<Integer, byte[]>> peer_bitfields;
+    private Set<Integer> interestedPeers;
 
     private Vector<Peer> peerList;
     // private Hashtable<Integer,Peer> peerList;
@@ -38,7 +41,21 @@ public class Peer {
     public Peer(int peerID) {
         this.peerID = peerID;
         peer_bitfields = new Vector<>();
+        interestedPeers = new HashSet<>();
         // readConfigFile();
+    }
+
+    // mark a peer as interested
+    public void markPeerAsInterested(int peerID) {
+        interestedPeers.add(peerID);
+    }
+    // check if a peer is interested
+    public boolean isPeerInterested(int peerID) {
+        return interestedPeers.contains(peerID);
+    }
+    // remove peer from the set when it is no longer interested
+    public void noLongerInterested(int peerID) {
+        interestedPeers.remove(peerID);
     }
 
     // Getters
