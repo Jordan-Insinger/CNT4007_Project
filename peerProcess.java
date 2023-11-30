@@ -185,12 +185,12 @@ public class peerProcess {
                     printHandshake(receivedHandshake);
 
                     // SEND BITFIELD MESSAGE TO SERVER PEER IF THE BITFIELD IS NOT ALL 0's
-                
-                    byte[] bitfieldMessage = message.bitfieldMessage(peer_);
+                  
+                    byte[] bitfieldMessage = message.bitfieldMessage(peerProc.peerList.get(initiatingPeerIndex));
                     sendMessage(socket, bitfieldMessage);
 
                     // pass client peer over to the handler to receive messages back
-                    Handler handle = new Handler(socket, peer_);
+                    Handler handle = new Handler(socket, peerProc.peerList.get(initiatingPeerIndex));
                     handle.run();  
                     System.out.println("Exiting Handler");
 
@@ -241,7 +241,7 @@ public class peerProcess {
 
                         // check if this server peer has any pieces, if it does, send a bitfield message
                         // back
-                        //byte[] bitfield = message.bitfieldMessage(peerProc.peerList.get(initiatingPeerIndex));
+                        //byte[] bitfield = message.bitfieldMessage(List.get(initiatingPeerIndex));
                         //sendMessage(clientSocket, bitfield);
                     }
 

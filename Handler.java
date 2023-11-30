@@ -53,6 +53,12 @@ public class Handler
                 }
                 System.out.println();
                 byte[] bitfield = peer.getBitfield();
+
+                System.out.print("This peer's bitfield: ");
+                for(byte b : bitfield){
+                    System.out.print(b);
+                }
+                System.out.println();
                 
                 // if this peer has any pieces, it sends a bitfield back
                 if(peer.isValidBitfield(bitfield)) {
