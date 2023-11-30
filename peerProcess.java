@@ -34,7 +34,7 @@ public class peerProcess {
     private int ID;
     private boolean hasFile;
     private byte[] bitfield;
-    private Peer mainPeer;
+    public Peer mainPeer;
 
     private int bitfieldSize;
 
