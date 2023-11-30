@@ -11,7 +11,6 @@ import java.util.BitSet;
 public class Handler 
 {
     private OutputStream oStream;
-    private OutputStream oStream;
     private ObjectInputStream in;
     private ObjectOutputStream out;
     private ByteBuffer length;

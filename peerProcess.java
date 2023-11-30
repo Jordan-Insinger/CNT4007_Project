@@ -36,7 +36,7 @@ public class peerProcess {
     private byte[] bitfield;
 
     peerProcess(){
-        message = new Message();
+        //message = new Message();
         messageLogger = new MessageLogger();
         peerList = new Vector<Peer>();
         preferredNeighbors = new Vector<Peer>();
@@ -338,7 +338,7 @@ public class peerProcess {
                     // create tcp connection to peer
                     Socket socket = new Socket("localhost", peer_.getListeningPort());
 
-                    peerProc.peerList.get(i).setSocket(socket);
+                    //peerProc.peerList.get(peer_).setSocket(socket);
 
                         // INITIATE HANDSHAKE
                         Message message = new Message(initiatorID);
