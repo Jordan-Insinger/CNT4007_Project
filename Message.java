@@ -8,9 +8,11 @@ import java.io.ObjectOutputStream;
 public class Message {
     private ByteArrayOutputStream oStream;
     private ByteBuffer length;
+    int peerID;
 
-    public Message() {
+    public Message(int peerID) {
         length = ByteBuffer.allocate(4); // 4 bytes allocated for length field in each message except handshake
+        this.peerID = peerID;
     }
 
      byte[] handshake(int peerID_) throws IOException 
@@ -77,17 +79,21 @@ public class Message {
 
     byte[] interestedMessage() throws IOException 
     {
+        oStream = new ByteArrayOutputStream();
         byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
+        byte[] peerID = new byte[4];
          
         messageType[0] = 2;
-        length.putInt(messageType.length);
+        peerID = ByteBuffer.allocate(4).putInt(this.peerID).array();
+        length.putInt(messageType.length + peerID.length);
         messageLength = length.array();
 
         try 
         {
             oStream.write(messageLength);
             oStream.write(messageType);
+            oStream.write(peerID);
         }
         catch (IOException e) 
         {
@@ -102,15 +108,18 @@ public class Message {
     {
         byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
+        byte[] peerID = new byte[4];
          
         messageType[0] = 3;
-        length.putInt(messageType.length);
+        peerID = ByteBuffer.allocate(4).putInt(this.peerID).array();
+        length.putInt(messageType.length + peerID.length);
         messageLength = length.array();
 
         try 
         {
             oStream.write(messageLength);
             oStream.write(messageType);
+            oStream.write(peerID);
         }
         catch (IOException e) 
         {
@@ -151,17 +160,20 @@ public class Message {
         oStream = new ByteArrayOutputStream();    // used for byte operations
         byte[] payload = peer.getBitfield();
         byte[] messageLength = new byte[4];
+        byte[] peerID = new byte[4];
         byte[] messageType = new byte[1];
          
+        peerID = ByteBuffer.allocate(4).putInt(peer.getPeerID()).array();
         messageType[0] = 5;
         
-        length.putInt(messageType.length + payload.length);
+        length.putInt(messageType.length + peerID.length + payload.length);
         messageLength = length.array();    
 
         try 
         {
             oStream.write(messageLength);
             oStream.write(messageType);
+            oStream.write(peerID);
             oStream.write(payload);   
         }
         catch (IOException e) 

@@ -1,4 +1,11 @@
 import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.Hashtable;
+import java.util.Set;
+import java.util.Vector;
+import java.util.Set;
+import java.util.HashSet;
+public class Peer {
 
 public class Peer{
     //Common.cfg
@@ -9,20 +16,22 @@ public class Peer{
     int fileSize;
     int pieceSize;
 
-    //PeerInfo.cfg
+    // PeerInfo.cfg
     private int peerID;
     private String hostName;
     private int listeningPort;
     private boolean hasFile;
 
-    //Other needed Peer variables
+    // Other needed Peer variables
     private byte[] bitfield;
+    Vector<Pair<Integer, byte[]>> peer_bitfields;
+    private Set<Integer> interestedPeers;
     private int numDownloadedBytes;
-    private double downloadSpeed;
+     private double downloadSpeed;
 
     private boolean interested;
     private boolean choked;
-    private boolean optimisticallyUnchoked;
+     private boolean optimisticallyUnchoked;
 
     private Socket socket;
 
@@ -30,16 +39,31 @@ public class Peer{
     //Constructor
     public Peer(int peerID) {
         this.peerID = peerID;
+        peer_bitfields = new Vector<>();
+        interestedPeers = new HashSet<>();
         numDownloadedBytes = 0;
         downloadSpeed = 0;
         interested = false;
         choked = true;
         optimisticallyUnchoked = false;
-        //readConfigFile();
+        // readConfigFile();
     }
 
-    //Getters
-    public int getPeerID(){
+    // mark a peer as interested
+    public void markPeerAsInterested(int peerID) {
+        interestedPeers.add(peerID);
+    }
+    // check if a peer is interested
+    public boolean isPeerInterested(int peerID) {
+        return interestedPeers.contains(peerID);
+    }
+    // remove peer from the set when it is no longer interested
+    public void noLongerInterested(int peerID) {
+        interestedPeers.remove(peerID);
+    }
+
+    // Getters
+    public int getPeerID() {
         return peerID;
     }
 
@@ -133,6 +157,30 @@ public class Peer{
         this.pieceSize = pieceSize;
     }
 
+    public void setPeerList(Vector<Peer> peerList) {
+        this.peerList = peerList;
+    }
+
+    // Helper Functions
+    public void sendMessage(byte[] message, ObjectOutputStream out) {
+        System.out.println("TEST");
+        try {
+            for (byte b : message) {
+                System.out.print(String.format("%02X ", b));
+            }
+            out.writeObject(message);
+            out.flush();
+        } catch (IOException e) {
+            System.out.println("IO Exception.");
+            e.printStackTrace();
+        }
+    }
+
+    // TO DO
+    public boolean allHaveFile() {
+        // find out if all Peers have downloaded full file
+        // Vector of Peers and check that for all of them hasFile = 1
+
     // Helper Functions
     // public void sendMessage(byte[] message, ObjectOutputStream out){
     //     System.out.println("TEST");
@@ -167,16 +215,17 @@ public class Peer{
         }
     }
 
-    //called when get 'have' message
-    public void updateBitfield(byte[] incomingBitfield){
-        if(incomingBitfield.length > bitfield.length){
-            //if new bitfield is bigger than current, make this Peer's bitfield bigger, and initialize to zero
+    // called when get 'have' message
+    public void updateBitfield(byte[] incomingBitfield) {
+        if (incomingBitfield.length > bitfield.length) {
+            // if new bitfield is bigger than current, make this Peer's bitfield bigger, and
+            // initialize to zero
             byte[] tempBitfield = new byte[incomingBitfield.length];
 
             //make sure previous pieces already in bitfield are saved
             for(int i = 0; i < bitfield.length; i++){
                 int temp = tempBitfield[i] & bitfield[i];
-                tempBitfield[i] = (byte)temp;
+                tempBitfield[i] = (byte) temp;
             }
 
             bitfield = tempBitfield;
@@ -193,7 +242,8 @@ public class Peer{
                 }
             }
         }
-        return false;        
+        return false;
     }
-    //every peer needs the common.cfg settings, run it within each peer?
+
+    // every peer needs the common.cfg settings, run it within each peer?
 }
