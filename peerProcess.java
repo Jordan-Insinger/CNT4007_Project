@@ -184,15 +184,15 @@ public class peerProcess {
                     byte[] receivedHandshake = receiveHandshake(socket);
                     printHandshake(receivedHandshake);
 
-                    // SEND BITFIELD MESSAGE TO SERVER PEER
-                    byte[] bitfieldMessage = message.bitfieldMessage(peerProc.peerList.get(initiatingPeerIndex));
-                    System.out.println("BITFIELD MESSAGE BEING SENT: ");
-                    printByteMessage(bitfieldMessage);
+                    // SEND BITFIELD MESSAGE TO SERVER PEER IF THE BITFIELD IS NOT ALL 0's
+                
+                    byte[] bitfieldMessage = message.bitfieldMessage(peer_);
                     sendMessage(socket, bitfieldMessage);
 
                     // pass client peer over to the handler to receive messages back
                     Handler handle = new Handler(socket, peer_);
                     handle.run();  
+                    System.out.println("Exiting Handler");
 
 
                     /*ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
