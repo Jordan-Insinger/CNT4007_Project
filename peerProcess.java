@@ -22,7 +22,7 @@ public class peerProcess {
     private int FileSize;
     private int PieceSize;
 
-    ServerSocket serverSocket;
+    Socket socket; //connection to 
     Message message;
     MessageLogger messageLogger;
 
@@ -34,6 +34,9 @@ public class peerProcess {
     private int ID;
     private boolean hasFile;
     private byte[] bitfield;
+    private Peer mainPeer;
+
+    private int bitfieldSize;
 
     peerProcess(){
         //message = new Message();
@@ -50,9 +53,18 @@ public class peerProcess {
             if(curr.getPeerID() == ID){
                 this.hasFile = curr.getHasFile();
                 this.bitfield = curr.getBitfield();
+                this.mainPeer = curr;
                 break;
             }
         }
+    }
+
+    Vector<Peer> getPeers(){
+        return peerList;
+    }
+
+    void updatePeerList(Vector<Peer> in){
+        peerList = in;
     }
 
     void readConfigFile(String filePath) {
@@ -78,6 +90,7 @@ public class peerProcess {
             FileName = params[3];
             FileSize = Integer.parseInt(params[4]);
             PieceSize = Integer.parseInt(params[5]);
+            bitfieldSize = (FileSize / PieceSize) / 8;
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -107,11 +120,17 @@ public class peerProcess {
         }
     }
 
-    // void setAllPeerLists() {
-    //     for (int i = 0; i < peerList.size(); i++) {
-    //         peerList.get(i).setPeerList(peerList);
-    //     }
-    // }
+    public int calculateRequest(Peer peer){
+        byte[] peerBitfield = peer.getBitfield();
+        Vector<Integer> indices = new Vector<Integer>();
+        for(int i = 0; i < bitfieldSize; i++){
+            if(peerBitfield[i] == 1 && bitfield[i] == 0){
+                indices.add(i);
+            }
+        }
+        Collections.shuffle(indices);
+        return indices.get(0);
+    }
 
     public boolean allHaveFile(){
         for(int i = 0; i < peerList.size(); i++){
@@ -157,9 +176,11 @@ public class peerProcess {
     }
 
     public void reselectPreferred(Instant startInstant){
+        Vector<Peer> copy = peerList;
+        copy.remove(mainPeer);
         Vector<Peer> interested = new Vector<Peer>();
-        for(int i = 0; i < peerList.size(); i++){
-            Peer curr = peerList.get(i);
+        for(int i = 0; i < copy.size(); i++){
+            Peer curr = copy.get(i);
             if(curr.getInterested()){
                 interested.add(curr);
             }
@@ -171,7 +192,7 @@ public class peerProcess {
             Instant finishInstant = Instant.now();
             int time = Duration.between(startInstant,finishInstant).getNano();
 
-            Collections.sort(peerList, (x,y) -> {
+            Collections.sort(copy, (x,y) -> {
                 return Double.compare(downloadRate(x, time), downloadRate(y, time)); //might need to change for random tie breaking
             });
         }
@@ -207,17 +228,19 @@ public class peerProcess {
     }
 
     public void reselectOptimistic(Instant startInstant){
+        Vector<Peer> copy = peerList;
+        copy.remove(mainPeer);
         Vector<Peer> possible = new Vector<Peer>();
-        for(int i = 0; i < peerList.size(); i++){
-            Peer curr = peerList.get(i);
+        for(int i = 0; i < copy.size(); i++){
+            Peer curr = copy.get(i);
             if(curr.getInterested() && curr.getChoked()){
-                possible.add(curr);
+                copy.add(curr);
             }
         }
 
-        Collections.shuffle(possible); //randomize, then pick first index
+        Collections.shuffle(copy); //randomize, then pick first index
 
-        if(!possible.get(0).equals(currOptimistic)){ 
+        if(!copy.get(0).equals(copy)){ 
             //if currently optimistically unchoked (OU) peer does not change, do nothing
             //otherwise, choke previous and unchoke new OU peer
             try{
@@ -305,6 +328,8 @@ public class peerProcess {
         }
     }
 
+
+
     public static void main(String[] args) throws IOException {
         // FILEPATHS
         String configCommon = "configFiles/Common.cfg";
@@ -353,7 +378,7 @@ public class peerProcess {
                         sendMessage(socket, bitfieldMessage);
 
                         // pass client peer over to the handler to receive messages back
-                        Handler handle = new Handler(socket, peerProc.peerList.get(initiatingPeerIndex));
+                        Handler handle = new Handler(socket, peerProc.peerList.get(initiatingPeerIndex),peerProc);
                         handle.run();
                         System.out.println("Exiting Handler");
 
@@ -378,7 +403,6 @@ public class peerProcess {
                     System.out.println("listening on port: " + peer_.getListeningPort());
                     ServerSocket serverSocket = new ServerSocket(peer_.getListeningPort());
                     peerProc.messageLogger.log_TCP_Connection(peerProc.ID, peer_.getPeerID());
-                    peerProc.serverSocket = serverSocket;
                     
                     //peerProc.peerList.remove(peer_); //remove "main" Peer from peerList so it doesnt do operations on itself?
                     
@@ -386,6 +410,7 @@ public class peerProcess {
                     while (true) {
                         Socket clientSocket = serverSocket.accept(); // listening to port, waiting for tcp
                                                                      // connection request from another peer
+                        peerProc.socket = clientSocket;
                         byte[] receivedHandshake = receiveHandshake(clientSocket);
                         printHandshake(receivedHandshake);
 
@@ -395,7 +420,7 @@ public class peerProcess {
                             sendMessage(clientSocket, handshake);
 
                             // start receiving messages from other peers
-                            Handler handle = new Handler(clientSocket, peer_);
+                            Handler handle = new Handler(clientSocket, peer_, peerProc);
                             handle.run();
 
                             // =============== START RECEIVING MESSAGES FROM CLIENT PEERS =================

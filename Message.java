@@ -1,6 +1,7 @@
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.BitSet;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -185,13 +186,13 @@ public class Message {
         return oStream.toByteArray();
     }
 
-    byte[] requestMessage() throws IOException 
+    byte[] requestMessage(int indexToRequest) throws IOException 
     {
         byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
          
         messageType[0] = 6;
-        byte[] payload = new byte[4]; // 4-byte piece index field
+        byte[] payload = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(indexToRequest).array(); // 4-byte piece index field
 
         length.putInt(messageType.length + payload.length);
         messageLength = length.array();
@@ -200,6 +201,7 @@ public class Message {
         {
             oStream.write(messageLength);
             oStream.write(messageType);
+            oStream.write(payload);
         }
         catch (IOException e) 
         {

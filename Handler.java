@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
+import java.util.Vector;
 
 public class Handler 
 {
@@ -14,13 +15,16 @@ public class Handler
     private ObjectInputStream in;
     private ObjectOutputStream out;
     private ByteBuffer length;
+
+    private peerProcess peerProc;
     
     private Socket clientSocket;
     private Peer peer;
 
-    public Handler(Socket clientSocket, Peer peer){
+    public Handler(Socket clientSocket, Peer peer, peerProcess peerProc){
         this.clientSocket = clientSocket;
         this.peer = peer;
+        this.peerProc = peerProc;
     }
     public void run(){ //decide what to do based on input bytes
         boolean temp = true;
@@ -38,15 +42,33 @@ public class Handler
             int receivedPeerID = ByteBuffer.wrap(incomingMsg, 1, 4).getInt();
 
             Message message = new Message(peer.getPeerID());
+
+            Vector<Peer> copyPeerList = peerProc.getPeers();
+
             switch(messageType){
                 case 0: //choke
 
                 case 1: //unchoke
+                    System.out.println("Received an unchoke message from peer: " + receivedPeerID);
+                    int indexToRequest = -1;
+                    for(int i = 0; i < copyPeerList.size(); i++){
+                        if(copyPeerList.get(i).getPeerID() == receivedPeerID){
+                            copyPeerList.get(i).setChoked(false);
+                            indexToRequest = peerProc.calculateRequest(copyPeerList.get(i));
+                        }
+                    }
+
+                    os.write(message.requestMessage(indexToRequest)); //todo, add random indexing of available bitfield
+                    os.flush();
 
                 case 2: //interested
                     System.out.println("Received an interested message from peer: " + receivedPeerID);
-                    peer.markPeerAsInterested(receivedPeerID);
-                    temp = false;
+                    for(int i = 0; i < copyPeerList.size(); i++){
+                        if(copyPeerList.get(i).getPeerID() == receivedPeerID){
+                            copyPeerList.get(i).setInterested(true);
+                        }
+                    }
+                    peerProc.updatePeerList(copyPeerList);
                     break;
 
                 case 3: //not interested
@@ -96,6 +118,7 @@ public class Handler
                 default: 
                 break;
             }
+            peerProc.updatePeerList(copyPeerList);
         } catch(IOException e) {
             e.printStackTrace();
         }

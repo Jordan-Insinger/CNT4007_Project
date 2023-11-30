@@ -35,7 +35,7 @@ public class Peer {
 
     private boolean interested;
     private boolean choked;
-     private boolean optimisticallyUnchoked;
+    private boolean optimisticallyUnchoked;
 
     private Socket socket;
 
