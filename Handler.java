@@ -24,6 +24,7 @@ public class Handler
     }
 
     public void run(){ //decide what to do based on input bytes
+        while(peer.allHaveFile() == false) {
         try{
             InputStream is = clientSocket.getInputStream();
             OutputStream os = clientSocket.getOutputStream();
@@ -33,21 +34,25 @@ public class Handler
             byte[] incomingMsg = new byte[messageLength];
             is.read(incomingMsg); 
             int messageType = (int) incomingMsg[0];
+       
+            int receivedPeerID = ByteBuffer.wrap(incomingMsg, 1, 4).getInt();
 
-            Message message = new Message();
+            Message message = new Message(peer.getPeerID());
             switch(messageType){
                 case 0: //choke
 
                 case 1: //unchoke
 
                 case 2: //interested
+                    System.out.println("Received an interested message from peer: " + receivedPeerID);
+                    break;
 
                 case 3: //not interested
 
                 case 4: //have
 
                 case 5: //bitfield
-                System.out.print("Received a bitfield message: ");
+                System.out.println("Received a bitfield message from peer: " + receivedPeerID);
                 for(byte b : incomingMsg){
                     System.out.print(b);
                 }
@@ -68,9 +73,13 @@ public class Handler
                 }
 
                 // check if the received bitfield form the other peer contains any new pieces
-                for(int i = 1; i < incomingMsg.length; i++) {
-                        if(bitfield[i - 1] == 0 && incomingMsg[i] == 1) {
-                            System.out.println("send an interested message");
+                for(int i = 5; i < incomingMsg.length; i++) {
+                        if(bitfield[i - 5] == 0 && incomingMsg[i] == 1) {
+                            System.out.println("Interested in piece");
+                            byte[] interestedMessage = message.interestedMessage();
+                            os.write(interestedMessage);
+                            os.flush();
+                            break;
                         }
                     }
             
@@ -84,5 +93,6 @@ public class Handler
         } catch(IOException e) {
             e.printStackTrace();
         }
+    }
     }
 }

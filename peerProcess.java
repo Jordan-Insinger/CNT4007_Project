@@ -1,9 +1,12 @@
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.net.ServerSocket;
 import java.net.*;
 import java.io.*;
+import java.lang.Thread;
 
 public class peerProcess {
 
@@ -147,10 +150,18 @@ public class peerProcess {
         }
     }
 
+    private static void getPeerBitfields(Peer peer, peerProcess peerProc) {
+        for(int i = 0; i < peerProc.peerList.size(); i++) {
+            Pair<Integer, byte[]> pair = new Pair<Integer,byte[]>(peerProc.peerList.get(i).getPeerID(), peerProc.peerList.get(i).getBitfield());
+            peer.peer_bitfields.add(pair);
+        }
+    }
+
     public static void main(String[] args) throws IOException {
         // FILEPATHS
         String configCommon = "configFiles/Common.cfg";
         String configPeerInfo = "configFiles/PeerInfo.cfg";
+        // List<Thread> connectionThreads = new ArrayList();
 
         int initiatorID = Integer.parseInt(args[0]);
         peerProcess peerProc = new peerProcess();
@@ -159,97 +170,105 @@ public class peerProcess {
 
         // if first peer, listen to port 6008 and make no connections
         // find initiating peer:
-        int initiatingPeerIndex = -1;
+        int initiateIndex = -1;
         for (int i = 0; i < peerProc.peerList.size(); i++) {
             if (initiatorID == peerProc.peerList.get(i).getPeerID())
-                initiatingPeerIndex = i;
+                initiateIndex = i;
         }
+        final int initiatingPeerIndex = initiateIndex;
 
         // create server socket and tcp connection to every peer before it
         for (int i = 0; i < peerProc.peerList.size(); i++) {
             Peer peer_ = peerProc.peerList.get(i);
+            peerProc.getPeerBitfields(peer_, peerProc);
 
-            if (peer_.getPeerID() < initiatorID) {
+            Thread thread = new Thread(() -> {
+                if (peer_.getPeerID() < initiatorID) {
 
-                try {
-                    // create tcp connection to peer
-                    Socket socket = new Socket("localhost", peer_.getListeningPort());
+                    try {
+                        // create tcp connection to peer
+                        Socket socket = new Socket("localhost", peer_.getListeningPort());
 
-                    // INITIATE HANDSHAKE
-                    Message message = new Message();
-                    byte[] handshake = message.handshake(initiatorID);
-                    sendMessage(socket, handshake); 
+                        // INITIATE HANDSHAKE
+                        Message message = new Message(initiatorID);
+                        byte[] handshake = message.handshake(initiatorID);
+                        sendMessage(socket, handshake);
 
-                    // RECEIVE HANDSHAKE BACK FROM SERVER PEER:
-                    byte[] receivedHandshake = receiveHandshake(socket);
-                    printHandshake(receivedHandshake);
-
-                    // SEND BITFIELD MESSAGE TO SERVER PEER IF THE BITFIELD IS NOT ALL 0's
-                  
-                    byte[] bitfieldMessage = message.bitfieldMessage(peerProc.peerList.get(initiatingPeerIndex));
-                    sendMessage(socket, bitfieldMessage);
-
-                    // pass client peer over to the handler to receive messages back
-                    Handler handle = new Handler(socket, peerProc.peerList.get(initiatingPeerIndex));
-                    handle.run();  
-                    System.out.println("Exiting Handler");
-
-
-                    /*ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-                        ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-                        Handler messageHandler = new Handler(peer_, socket, in, out);
-                    messageHandler.run();*/
-
-
-                    // receive bitfield message from server
-                    //byte[] receivedBitfield = receiveMessage(socket);
-                    //printByteMessage(receivedBitfield);
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            } else if (peer_.getPeerID() == initiatorID) {
-                // create serverSocket
-                try {
-                    System.out.println("listening on port: " + peer_.getListeningPort());
-                    ServerSocket serverSocket = new ServerSocket(peer_.getListeningPort());
-
-                    while (true) {
-                        Socket clientSocket = serverSocket.accept(); // listening to port, waiting for tcp
-                                                                     // connection request from another peer
-                        byte[] receivedHandshake = receiveHandshake(clientSocket);
+                        // RECEIVE HANDSHAKE BACK FROM SERVER PEER:
+                        byte[] receivedHandshake = receiveHandshake(socket);
                         printHandshake(receivedHandshake);
 
-                        // send handshake back to client peer
-                        Message message = new Message();
-                        byte[] handshake = message.handshake(initiatorID);
-                        sendMessage(clientSocket, handshake);
+                        // SEND BITFIELD MESSAGE TO SERVER PEER IF THE BITFIELD IS NOT ALL 0's
 
-                        // start receiving messages from other peers
-                        Handler handle = new Handler(clientSocket, peer_);
+                        byte[] bitfieldMessage = message.bitfieldMessage(peerProc.peerList.get(initiatingPeerIndex));
+                        sendMessage(socket, bitfieldMessage);
+
+                        // pass client peer over to the handler to receive messages back
+                        Handler handle = new Handler(socket, peerProc.peerList.get(initiatingPeerIndex));
                         handle.run();
+                        System.out.println("Exiting Handler");
 
-                        // =============== START RECEIVING MESSAGES FROM CLIENT PEERS =================
-                        /*ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
-                        ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
-                        Handler messageHandler = new Handler(peer_, clientSocket, in, out);
-                        messageHandler.run();*/
-                        
-                        //byte[] receivedBitfield = receiveMessage(clientSocket);
-                        //printByteMessage(receivedBitfield);
+                        /*
+                         * ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+                         * ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+                         * Handler messageHandler = new Handler(peer_, socket, in, out);
+                         * messageHandler.run();
+                         */
 
-                        // check if this server peer has any pieces, if it does, send a bitfield message
-                        // back
-                        //byte[] bitfield = message.bitfieldMessage(List.get(initiatingPeerIndex));
-                        //sendMessage(clientSocket, bitfield);
+                        // receive bitfield message from server
+                        // byte[] receivedBitfield = receiveMessage(socket);
+                        // printByteMessage(receivedBitfield);
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
 
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } else if (peer_.getPeerID() == initiatorID) {
+                    // create serverSocket
+                    try {
+                        System.out.println("listening on port: " + peer_.getListeningPort());
+                        ServerSocket serverSocket = new ServerSocket(peer_.getListeningPort());
+
+                        while (true) {
+                            Socket clientSocket = serverSocket.accept(); // listening to port, waiting for tcp
+                                                                         // connection request from another peer
+                            byte[] receivedHandshake = receiveHandshake(clientSocket);
+                            printHandshake(receivedHandshake);
+
+                            // send handshake back to client peer
+                            Message message = new Message(initiatorID);
+                            byte[] handshake = message.handshake(initiatorID);
+                            sendMessage(clientSocket, handshake);
+
+                            // start receiving messages from other peers
+                            Handler handle = new Handler(clientSocket, peer_);
+                            handle.run();
+
+                            // =============== START RECEIVING MESSAGES FROM CLIENT PEERS =================
+                            /*
+                             * ObjectOutputStream out = new
+                             * ObjectOutputStream(clientSocket.getOutputStream());
+                             * ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+                             * Handler messageHandler = new Handler(peer_, clientSocket, in, out);
+                             * messageHandler.run();
+                             */
+
+                            // byte[] receivedBitfield = receiveMessage(clientSocket);
+                            // printByteMessage(receivedBitfield);
+
+                            // check if this server peer has any pieces, if it does, send a bitfield message
+                            // back
+                            // byte[] bitfield = message.bitfieldMessage(List.get(initiatingPeerIndex));
+                            // sendMessage(clientSocket, bitfield);
+                        }
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
-            } else
-                break;
+            });
+            thread.start();
+
         }
 
     }

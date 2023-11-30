@@ -26,6 +26,7 @@ public class Peer {
 
     // Other needed Peer variables
     private byte[] bitfield;
+    Vector<Pair<Integer, byte[]>> peer_bitfields;
 
     private Vector<Peer> peerList;
     // private Hashtable<Integer,Peer> peerList;
@@ -36,6 +37,7 @@ public class Peer {
     // Constructor
     public Peer(int peerID) {
         this.peerID = peerID;
+        peer_bitfields = new Vector<>();
         // readConfigFile();
     }
 
