@@ -95,7 +95,9 @@ public class peerProcess {
                 Peer peer = new Peer(Integer.parseInt(tokens[0]));
                 peer.setHostName(tokens[1]);
                 peer.setListeningPort(Integer.parseInt(tokens[2]));
-                peer.setHasFile(Boolean.parseBoolean(tokens[3]));
+                int booleanValue = Integer.parseInt(tokens[3]);
+                boolean has = (booleanValue == 1);
+                peer.setHasFile(has);
                 peer.setGlobalConfig(NumberOfPreferredNeighbors, UnchokingInterval, OptimisticUnchokingInterval,
                     FileName, FileSize, PieceSize);
                 peer.initializeBitfield(peer.getHasFile());
@@ -337,7 +339,7 @@ public class peerProcess {
                     try {
                         // create tcp connection to peer
                         Socket socket = new Socket("localhost", peer_.getListeningPort());
-
+                        peerProc.messageLogger.log_TCP_Connection(peer_.getPeerID(), peerProc.peerList.get(initiatingPeerIndex).getPeerID());
                         // INITIATE HANDSHAKE
                         Message message = new Message(initiatorID);
                         byte[] handshake = message.handshake(initiatorID);
@@ -377,7 +379,6 @@ public class peerProcess {
                 try {
                     System.out.println("listening on port: " + peer_.getListeningPort());
                     ServerSocket serverSocket = new ServerSocket(peer_.getListeningPort());
-                    peerProc.messageLogger.log_TCP_Connection(peerProc.ID, peer_.getPeerID());
                     peerProc.serverSocket = serverSocket;
                     
                     //peerProc.peerList.remove(peer_); //remove "main" Peer from peerList so it doesnt do operations on itself?
@@ -397,6 +398,7 @@ public class peerProcess {
                             // start receiving messages from other peers
                             Handler handle = new Handler(clientSocket, peer_);
                             handle.run();
+                            System.out.println("Exited handler");
 
                             // =============== START RECEIVING MESSAGES FROM CLIENT PEERS =================
                             /*

@@ -106,14 +106,17 @@ public class Message {
 
     byte[] notinterestedMessage() throws IOException 
     {
+        oStream = new ByteArrayOutputStream();
+        ByteBuffer len = ByteBuffer.allocate(4);
         byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
         byte[] peerID = new byte[4];
          
         messageType[0] = 3;
         peerID = ByteBuffer.allocate(4).putInt(this.peerID).array();
-        length.putInt(messageType.length + peerID.length);
-        messageLength = length.array();
+        len.putInt(messageType.length + peerID.length);
+        messageLength = len.array();
+        len.clear();
 
         try 
         {
