@@ -29,6 +29,10 @@ public class Peer {
     private Vector<Peer> peerList;
     // private Hashtable<Integer,Peer> peerList;
 
+    private int numDownloadedBytes;
+    private double downloadSpeed;
+
+
     private boolean interested;
     private boolean choked;
      private boolean optimisticallyUnchoked;
