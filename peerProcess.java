@@ -334,11 +334,9 @@ public class peerProcess {
             Thread thread = new Thread(() -> {
                 if (peer_.getPeerID() < initiatorID) {
 
-                try {
-                    // create tcp connection to peer
-                    Socket socket = new Socket("localhost", peer_.getListeningPort());
-
-                    //peerProc.peerList.get(peer_).setSocket(socket);
+                    try {
+                        // create tcp connection to peer
+                        Socket socket = new Socket("localhost", peer_.getListeningPort());
 
                         // INITIATE HANDSHAKE
                         Message message = new Message(initiatorID);

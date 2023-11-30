@@ -2,6 +2,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Hashtable;
 import java.util.Set;
+import java.util.Set;
 import java.util.Vector;
 import java.util.Set;
 import java.util.HashSet;
@@ -24,8 +25,9 @@ public class Peer {
     private byte[] bitfield;
     Vector<Pair<Integer, byte[]>> peer_bitfields;
     private Set<Integer> interestedPeers;
-    private int numDownloadedBytes;
-     private double downloadSpeed;
+
+    private Vector<Peer> peerList;
+    // private Hashtable<Integer,Peer> peerList;
 
     private boolean interested;
     private boolean choked;
@@ -34,7 +36,7 @@ public class Peer {
     private Socket socket;
 
 
-    //Constructor
+    // Constructor
     public Peer(int peerID) {
         this.peerID = peerID;
         peer_bitfields = new Vector<>();
@@ -44,7 +46,9 @@ public class Peer {
         interested = false;
         choked = true;
         optimisticallyUnchoked = false;
-        // readConfigFile();
+        peer_bitfields = new Vector<>();
+        interestedPeers = new HashSet<>();
+        //  readConfigFile();
     }
 
     // mark a peer as interested
