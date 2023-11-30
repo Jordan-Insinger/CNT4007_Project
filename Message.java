@@ -108,15 +108,18 @@ public class Message {
     {
         byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
+        byte[] peerID = new byte[4];
          
         messageType[0] = 3;
-        length.putInt(messageType.length);
+        peerID = ByteBuffer.allocate(4).putInt(this.peerID).array();
+        length.putInt(messageType.length + peerID.length);
         messageLength = length.array();
 
         try 
         {
             oStream.write(messageLength);
             oStream.write(messageType);
+            oStream.write(peerID);
         }
         catch (IOException e) 
         {

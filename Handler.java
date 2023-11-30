@@ -23,7 +23,8 @@ public class Handler
         this.peer = peer;
     }
     public void run(){ //decide what to do based on input bytes
-        while(peer.allHaveFile() == false) {
+        boolean temp = true;
+        while(temp) {
         try{
             InputStream is = clientSocket.getInputStream();
             OutputStream os = clientSocket.getOutputStream();
@@ -45,11 +46,13 @@ public class Handler
                 case 2: //interested
                     System.out.println("Received an interested message from peer: " + receivedPeerID);
                     peer.markPeerAsInterested(receivedPeerID);
+                    temp = false;
                     break;
 
                 case 3: //not interested
                     if(peer.isPeerInterested(receivedPeerID)) {
                         peer.noLongerInterested(receivedPeerID);
+                        temp = false;
                     }
 
                 case 4: //have
