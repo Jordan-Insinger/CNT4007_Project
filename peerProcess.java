@@ -404,7 +404,6 @@ public class peerProcess {
                 try {
                     System.out.println("listening on port: " + peer_.getListeningPort());
                     ServerSocket serverSocket = new ServerSocket(peer_.getListeningPort());
-                    peerProc.serverSocket = serverSocket;
                     
                     //peerProc.peerList.remove(peer_); //remove "main" Peer from peerList so it doesnt do operations on itself?
                     
