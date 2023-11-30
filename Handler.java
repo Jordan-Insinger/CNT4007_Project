@@ -10,7 +10,7 @@ import java.util.BitSet;
 
 public class Handler 
 {
-    private ByteArrayOutputStream oStream;
+    private OutputStream oStream;
     private ObjectInputStream in;
     private ObjectOutputStream out;
     private ByteBuffer length;
@@ -26,7 +26,7 @@ public class Handler
     public void run(){ //decide what to do based on input bytes
         try{
             InputStream is = clientSocket.getInputStream();
-
+            OutputStream os = clientSocket.getOutputStream();
             byte[] length = new byte[4];
             is.read(length);
             int messageLength = ByteBuffer.wrap(length).getInt();
@@ -35,7 +35,6 @@ public class Handler
             int messageType = (int) incomingMsg[0];
 
             Message message = new Message();
-
             switch(messageType){
                 case 0: //choke
 
@@ -48,11 +47,39 @@ public class Handler
                 case 4: //have
 
                 case 5: //bitfield
-                System.out.println("Received a bitfield message");
-                                    
+                System.out.print("Received a bitfield message: ");
+                for(byte b : incomingMsg){
+                    System.out.print(b);
+                }
+                System.out.println();
+                byte[] bitfield = peer.getBitfield();
+
+                System.out.print("This peer's bitfield: ");
+                for(byte b : bitfield){
+                    System.out.print(b);
+                }
+                System.out.println();
+                
+                // if this peer has any pieces, it sends a bitfield back
+                if(peer.isValidBitfield(bitfield)) {
+                    byte[] sent_bitfield = message.bitfieldMessage(peer);
+                    os.write(sent_bitfield);
+                    os.flush();
+                }
+
+                // check if the received bitfield form the other peer contains any new pieces
+                for(int i = 1; i < incomingMsg.length; i++) {
+                        if(bitfield[i - 1] == 0 && incomingMsg[i] == 1) {
+                            System.out.println("send an interested message");
+                        }
+                    }
+            
+                break;
                 case 6: //request
 
                 case 7: //piece
+                default: 
+                break;
             }
         } catch(IOException e) {
             e.printStackTrace();
