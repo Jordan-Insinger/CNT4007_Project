@@ -48,6 +48,7 @@ public class Handler
                 case 4: //have
 
                 case 5: //bitfield
+                System.out.println("Received a bitfield message");
                                     
                 case 6: //request
 

@@ -10,12 +10,12 @@ public class Message {
     private ByteBuffer length;
 
     public Message() {
-        oStream = new ByteArrayOutputStream();    // used for byte operations
         length = ByteBuffer.allocate(4); // 4 bytes allocated for length field in each message except handshake
     }
 
      byte[] handshake(int peerID_) throws IOException 
     {
+        oStream = new ByteArrayOutputStream();    // used for byte operations
         byte[] header =  "P2PFILESHARINGPROJ".getBytes();   // 18-byte String
         byte[] zeros = new byte[10];    // 10-byte zero bits
         int peerID = peerID_; // 4-byte integer ID
@@ -25,6 +25,7 @@ public class Message {
         byte[] bytes = ByteBuffer.allocate(4).putInt(peerID).array();
         oStream.write(bytes);
 
+        oStream.flush();
         oStream.close();
         return oStream.toByteArray();
     }
@@ -147,6 +148,7 @@ public class Message {
 
     byte[] bitfieldMessage(Peer peer) throws IOException 
     {
+        oStream = new ByteArrayOutputStream();    // used for byte operations
         byte[] payload = peer.getBitfield();
         byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];

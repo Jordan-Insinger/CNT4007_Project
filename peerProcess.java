@@ -175,12 +175,10 @@ public class peerProcess {
                     // create tcp connection to peer
                     Socket socket = new Socket("localhost", peer_.getListeningPort());
 
-                    // get output stream to send data
-
                     // INITIATE HANDSHAKE
                     Message message = new Message();
                     byte[] handshake = message.handshake(initiatorID);
-                    sendMessage(socket, handshake);
+                    sendMessage(socket, handshake); 
 
                     // RECEIVE HANDSHAKE BACK FROM SERVER PEER:
                     byte[] receivedHandshake = receiveHandshake(socket);
@@ -192,14 +190,20 @@ public class peerProcess {
                     printByteMessage(bitfieldMessage);
                     sendMessage(socket, bitfieldMessage);
 
+                    // pass client peer over to the handler to receive messages back
+                    Handler handle = new Handler(socket, peer_);
+                    handle.run();  
+
 
                     /*ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
                         ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
                         Handler messageHandler = new Handler(peer_, socket, in, out);
                     messageHandler.run();*/
+
+
                     // receive bitfield message from server
-                    byte[] receivedBitfield = receiveMessage(socket);
-                    printByteMessage(receivedBitfield);
+                    //byte[] receivedBitfield = receiveMessage(socket);
+                    //printByteMessage(receivedBitfield);
 
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -222,19 +226,23 @@ public class peerProcess {
                         byte[] handshake = message.handshake(initiatorID);
                         sendMessage(clientSocket, handshake);
 
+                        // start receiving messages from other peers
+                        Handler handle = new Handler(clientSocket, peer_);
+                        handle.run();
+
                         // =============== START RECEIVING MESSAGES FROM CLIENT PEERS =================
                         /*ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
                         ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
                         Handler messageHandler = new Handler(peer_, clientSocket, in, out);
                         messageHandler.run();*/
-
-                        byte[] receivedBitfield = receiveMessage(clientSocket);
-                        printByteMessage(receivedBitfield);
+                        
+                        //byte[] receivedBitfield = receiveMessage(clientSocket);
+                        //printByteMessage(receivedBitfield);
 
                         // check if this server peer has any pieces, if it does, send a bitfield message
                         // back
-                        byte[] bitfield = message.bitfieldMessage(peerProc.peerList.get(initiatingPeerIndex));
-                        sendMessage(clientSocket, bitfield);
+                        //byte[] bitfield = message.bitfieldMessage(peerProc.peerList.get(initiatingPeerIndex));
+                        //sendMessage(clientSocket, bitfield);
                     }
 
                 } catch (IOException e) {
