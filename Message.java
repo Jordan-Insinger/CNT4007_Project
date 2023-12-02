@@ -36,42 +36,36 @@ public class Message {
     }
 
     byte[] chokeMessage() throws IOException {
-        byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
         messageType[0] = 0;
-        length.putInt(messageType.length);
-        messageLength = length.array();
-
+        byte[] messageLength = ByteBuffer.allocate(4).putInt(1).array(); 
         try{
             oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
-        }catch(IOException e){
+        }
+        catch(IOException e){
             e.printStackTrace();
         }
             
-        oStream.close();
+        oStream.close();        
         return oStream.toByteArray();
     }
 
     byte[] unchokeMessage() throws IOException {
-        byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
-
         messageType[0] = 1;
-        length.putInt(messageType.length);
-        messageLength = length.array();        
-
+        byte[] messageLength = ByteBuffer.allocate(4).putInt(1).array(); 
         try{
             oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
         }
-        catch (IOException e){
+        catch(IOException e){
             e.printStackTrace();
         }
             
-        oStream.close();
+        oStream.close();        
         return oStream.toByteArray();
     }
 
@@ -93,24 +87,19 @@ public class Message {
     }
 
     byte[] notinterestedMessage() throws IOException {
-        ByteBuffer len = ByteBuffer.allocate(4);
-        byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
-         
         messageType[0] = 3;
-        len.putInt(messageType.length);
-        messageLength = len.array();
-        len.clear();
-
+        byte[] messageLength = ByteBuffer.allocate(4).putInt(1).array();
         try{
+            oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
-            oStream.write(peerID);
-        }catch(IOException e){
+        }
+        catch(IOException e){
             e.printStackTrace();
         }
-
-        oStream.close();
+            
+        oStream.close();        
         return oStream.toByteArray();
     }
 

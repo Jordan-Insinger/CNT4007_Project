@@ -2,6 +2,8 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Enumeration;
+import java.util.Hashtable;
 import java.util.Vector;
 
 public class MessageLogger {
@@ -25,8 +27,11 @@ public class MessageLogger {
             if(i == preferredNeighbors.size()-1){
                 message = message + preferredNeighbors.get(i).getPeerID() + ".";
             }else{
-                message = message + preferredNeighbors.get(i).getPeerID() + ",";
+                message = message + preferredNeighbors.get(i).getPeerID() + ", ";
             }
+        }
+        if(preferredNeighbors.isEmpty()){
+            message = message + "[none].";
         }
         write_Log_Message(filepath, message);
     }

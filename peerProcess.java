@@ -26,12 +26,14 @@ public class peerProcess {
     private int FileSize;
     private int PieceSize;
 
-    private Vector<Peer> peersList;
+    private Hashtable<Integer,Peer> peersList;
+    private Vector<Peer> peersListVec;
     private Peer currPeer;
     private MessageLogger messageLogger;
 
     peerProcess(){
-        peersList = new Vector<Peer>();
+        peersList = new Hashtable<Integer,Peer>();
+        peersListVec
         messageLogger = new MessageLogger();
     }
 
@@ -79,18 +81,19 @@ public class peerProcess {
                 int booleanValue = Integer.parseInt(tokens[3]);
                 boolean has = (booleanValue == 1);
                 peer.setHasFile(has);
-                if(has){
-                    //peer.setFile(); ///////////adadsad
-                }
 
                 peer.setGlobalConfig(NumberOfPreferredNeighbors, UnchokingInterval, OptimisticUnchokingInterval,
                     FileName, FileSize, PieceSize);
                 peer.initializeBitfield(peer.getHasFile());
 
+                if(has){
+                    peer.setFile("./configFiles/project_config_file_small/project_config_file_small/" + tokens[0] + "/" + FileName);
+                }
+
                 if(currID == peer.getPeerID()){
                     currPeer = peer;
                 }else{
-                    peersList.add(peer); //all other peers, excluding current peer with given CLA ID integer
+                    peersList.put(peer.getPeerID(), peer); //all other peers, excluding current peer with given CLA ID integer
                 }
             }
         } catch (FileNotFoundException e) {
@@ -126,23 +129,23 @@ public class peerProcess {
             serverSocket = new ServerSocket(listeningPort);
             while(true){
                 Socket clientSocket = serverSocket.accept();
-                OutputStream os = clientSocket.getOutputStream();
-                InputStream is = clientSocket.getInputStream();
+                ObjectOutputStream os = new ObjectOutputStream(clientSocket.getOutputStream());
+                ObjectInputStream is = new ObjectInputStream(clientSocket.getInputStream());
                 Handler handler = new Handler(os, is, currPeer);
                 new Thread(handler).start();
             }
         }catch(IOException e){
             System.err.println("Error opening server socket on listening port " + listeningPort + ".");
             e.printStackTrace();
-        }finally{
-            try{
-                serverSocket.close();
-                currPeer.shutdown(); //end choking reselection timers on finish
-            }catch(IOException e){
-                System.err.println("Problem closing server connection for " + currPeer.getPeerID());
-                e.printStackTrace();
-            }
-        }
+        }//finally{
+            //try{
+                //serverSocket.close();
+                //currPeer.shutdown(); //end choking reselection timers on finish
+            //}catch(){
+                //System.err.println("Problem closing server connection for " + currPeer.getPeerID());
+                //e.printStackTrace();
+            //}
+        //}
     }
 
     public void connectToLowerPeers(){
@@ -151,8 +154,8 @@ public class peerProcess {
             if(peer.getPeerID() < currPeer.getPeerID()){
                 try{
                     socket = new Socket("localhost", peer.getListeningPort());
-                    OutputStream os = socket.getOutputStream();
-                    InputStream is = socket.getInputStream();
+                    ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
+                    ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
                     Handler handler = new Handler(os, is, currPeer);
                     messageLogger.log_TCP_Connection(currPeer.getPeerID(), peer.getPeerID());
                     new Thread(handler).start();
@@ -172,8 +175,11 @@ public class peerProcess {
             return;
         }
         // FILEPATHS
-        String configCommon = "configFiles/Common.cfg";
-        String configPeerInfo = "configFiles/PeerInfo.cfg";
+        String configCommon = "./configFiles/project_config_file_small/project_config_file_small/Common.cfg";
+        String configPeerInfo = "./configFiles/project_config_file_small/project_config_file_small/PeerInfo.cfg";
+
+        // String configCommon = "./project_config_file_large/project_config_file_large/Common.cfg";
+        // String configPeerInfo = "./project_config_file_large/project_config_file_large/PeerInfo.cfg";
 
         int initiatorID = Integer.parseInt(args[0]);
         peerProcess peerProc = new peerProcess();
