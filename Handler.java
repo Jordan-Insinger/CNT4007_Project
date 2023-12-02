@@ -1,14 +1,15 @@
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
-public class Handler implements Runnable 
-{
-    private InputStream is;
+public class Handler implements Runnable {
     private OutputStream os;
-    
+    private InputStream is;
+
     private Peer peer;
     private Peer clientPeer;
 
@@ -16,36 +17,44 @@ public class Handler implements Runnable
     private MessageLogger messageLogger;
 
     private int index;
-    private boolean isClient;
+    private boolean bitfieldReceived;
 
-    public Handler(Socket clientSocket, Peer peer, boolean isClient){
+    public Handler(OutputStream os, InputStream is, Peer peer){
         this.peer = peer;
         clientPeer = null;
-        this.isClient = isClient;
-        try{
-            is = clientSocket.getInputStream();
-            os = clientSocket.getOutputStream();
-        }catch(IOException e){
-            e.printStackTrace();
-        }
         message = new Message(peer.getPeerID());
-        messageLogger = new MessageLogger();        
+        messageLogger = new MessageLogger(); 
+        this.os = os;
+        this.is = is;
+        bitfieldReceived = false;
     }
 
     public void run(){ //decide what to do based on input bytes
-        processHandshakes(); //send and receive handshakes, and then enter loop, where it will stay until all files have file
 
-        while(!peer.allHaveFile()){
-            try{            
+        sendHandshake(); //initial handshake message
+        receiveHandshake(); //check that return handshake is valid, then sends bitfield
+
+        while(!peer.allHaveFile()){ //until confirms that all peers have the file, stay in handler loop
+            try{         
+                //TimeUnit.SECONDS.sleep(3); //for slower testing 
                 byte[] length = new byte[4];
                 is.read(length);
-                int messageLength = ByteBuffer.wrap(length).getInt();
+                int messageLength = ByteBuffer.wrap(length).order(ByteOrder.BIG_ENDIAN).getInt();
 
                 byte[] msgType = new byte[1];
                 is.read(msgType);
                 int messageType = (int) msgType[0];
 
                 byte[] payload;
+                if(messageLength > 1){
+                    payload = new byte[messageLength-1];
+                }else{
+                    payload = new byte[0];
+                }
+                
+                is.read(payload);
+                
+                //System.out.println("Message length: " + messageLength + "  Message type: " + messageType);
 
                 switch(messageType){
                     case 0: //choke
@@ -61,29 +70,26 @@ public class Handler implements Runnable
                         processNotInterested();
                         break;
                     case 4: //have
-                        payload = new byte[messageLength];
-                        is.read(payload);
                         processHave(payload);
                         break;
                     case 5: //bitfield
-                        payload = new byte[messageLength];
-                        is.read(payload);
-                        processBitfield(payload);
+                        if(!bitfieldReceived){
+                            bitfieldReceived = true;
+                            processBitfield(payload);
+                        }
                         break;
                     case 6: //request
-                        payload = new byte[messageLength];
-                        is.read(payload);
                         processRequest(payload);
                         break;
                     case 7: //piece
-                        payload = new byte[messageLength];
-                        is.read(payload);
                         processPiece(payload);
                         break;
                 }
             }catch(IOException e) {
                 e.printStackTrace();
-            }
+            }//catch(InterruptedException e){
+               // e.printStackTrace();
+            //}
         }
         try{
             is.close();
@@ -93,7 +99,12 @@ public class Handler implements Runnable
         }
     }
 
-    private static void printHandshake(byte[] handshake){ // handles receiving messages from client
+    private void sendMessage(byte[] toWrite) throws IOException{
+        os.write(toWrite);
+        os.flush();
+    }
+
+    private static void printHandshake(byte[] handshake){ //test print debugging
         String receivedMessage = new String(handshake, 0, 18);
         int id = ByteBuffer.wrap(handshake, 28, 4).getInt();
         System.out.println("Received Message: " + receivedMessage);
@@ -103,53 +114,66 @@ public class Handler implements Runnable
     private static void printByteMessage(byte[] message){
         System.out.println("Printing Byte Message:");
         for (byte value : message) {
-            System.out.print((value & 0xFF) + " ");
+            //System.out.print((value & 0xFF) + " ");
+            System.out.print(value + " ");
         }
+        System.out.println("");
     }
 
-    private void processHandshakes(){
+    private void sendHandshake(){
         try{
-            byte[] incomingHandshake = new byte[32];
-            if(isClient){
-                is.read(incomingHandshake);
-                printHandshake(incomingHandshake);
-                os.write(message.handshake(peer.getPeerID()));
-                os.flush();
-            }else{
-                os.write(message.handshake(peer.getPeerID()));
-                os.flush();
-                is.read(incomingHandshake);
-                printHandshake(incomingHandshake);
-            }
-
-            //todo, check string header and incoming peer id to make sure they seem correct
-
-            int incomingPeerID = //convert last 4 bytes into int for peerID, could probably do it prettier
-                ((incomingHandshake[28] & 0xFF) << 24) |
-                ((incomingHandshake[29] & 0xFF) << 16) |
-                ((incomingHandshake[30] & 0xFF) << 8)  |
-                ((incomingHandshake[31] & 0xFF) << 0);
-            
-            getPeerFromID(incomingPeerID);
-
-            os.write(message.bitfieldMessage(peer));
+            os.write(message.handshake(peer.getPeerID()));
             os.flush();
         }catch(IOException e){
             e.printStackTrace();
         }
     }
 
-    private void getPeerFromID(int incomingID){
+    private void receiveHandshake(){
+        byte[] incomingHandshake = new byte[32];
+        try{
+            is.read(incomingHandshake);
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+
+        byte[] header = new byte[18];
+        System.arraycopy(incomingHandshake,0,header,0,18);
+        String incomingHeader = new String(header, StandardCharsets.UTF_8);
+
+        int incomingPeerID = //convert last 4 bytes into int for peerID, could probably do it prettier
+            ((incomingHandshake[28] & 0xFF) << 24) |
+            ((incomingHandshake[29] & 0xFF) << 16) |
+            ((incomingHandshake[30] & 0xFF) << 8)  |
+            ((incomingHandshake[31] & 0xFF) << 0);
+
+        //if incoming handshake is valid, send bitfield back
+        if(getPeerFromID(incomingPeerID) == 1 && incomingHeader.equals("P2PFILESHARINGPROJ")){
+            messageLogger.log_TCP_Connected(peer.getPeerID(), clientPeer.getPeerID());
+            peer.addChoked(clientPeer);
+            peer.setOutputStream(os, clientPeer);
+            try{
+                sendMessage(message.bitfieldMessage(peer));   
+                
+            }catch(IOException e){
+                e.printStackTrace();
+            }         
+        }
+    }
+
+    private int getPeerFromID(int incomingID){
         for(Peer peer : peer.getPeerList()){
             if(peer.getPeerID() == incomingID){
                 clientPeer = peer;
+                return 1;
             }
         }
+        return -1;
     }
 
     private void processChoke(){
         System.out.println("Received a choke message from peer: " + clientPeer.getPeerID());
-        clientPeer.setChoked(true); //todo, where to actually do this
+        peer.addChoked(clientPeer); //todo, where to actually do this
         messageLogger.log_Choke(peer.getPeerID(), clientPeer.getPeerID());
     }
 
@@ -158,7 +182,7 @@ public class Handler implements Runnable
                         
         //based on peer bitfield, decide what index to requst and send, might need to adjust, as might not actually need anything if it has the file already
         int indexToRequest = peer.calculateRequest(clientPeer.getBitfield());
-        clientPeer.setChoked(false);
+        peer.removeChoked(clientPeer);
         messageLogger.log_Unchoke(peer.getPeerID(), clientPeer.getPeerID());
         try{
             if(indexToRequest != -1){ //if -1, then peer has file already, dont need to request
@@ -172,13 +196,13 @@ public class Handler implements Runnable
 
     private void processInterested(){
         System.out.println("Received an interested message from peer: " + clientPeer.getPeerID());
-        clientPeer.setInterested(true);
+        peer.addInterested(clientPeer);
         messageLogger.log_Interested(peer.getPeerID(), clientPeer.getPeerID());
     }
 
     private void processNotInterested(){
         System.out.println("Received a not interested message from peer: " + clientPeer.getPeerID());
-        clientPeer.setInterested(false);
+        peer.removeInterested(clientPeer);
         messageLogger.log_Not_Interested(peer.getPeerID(), clientPeer.getPeerID());
     }
 
@@ -206,27 +230,23 @@ public class Handler implements Runnable
     }
 
     private void processBitfield(byte[] payload){
-        System.out.println("Received a bitfield message from peer: " + clientPeer.getPeerID());
+        System.out.print("\nReceived a bitfield message from peer " + clientPeer.getPeerID() + ":\n");
         for(byte b : payload){
             System.out.print(b);
         }
-        System.out.println();
-        byte[] bitfield = clientPeer.getBitfield();
+        System.out.println("");
 
-        System.out.print("This peer's bitfield: ");
+        byte[] bitfield = peer.getBitfield();
+        System.out.println("\nPeer " + peer.getPeerID() + " bitfield:");
         for(byte b : bitfield){
             System.out.print(b);
         }
-        System.out.println();
+        System.out.println("\n");
 
         try{
-            // if this peer has any pieces and is valid, it sends a bitfield back
-            if(peer.isValidBitfield(peer.getBitfield())){
-                os.write(message.bitfieldMessage(peer));
-                os.flush();
-            }
             //compare bitfields and return result, and send corresponding message
-            boolean interested = peer.isPeerInterested(bitfield);
+            boolean interested = peer.isPeerInterested(payload);
+            System.out.println("Interested? " + interested + "\n");
             if(interested) {
                 os.write(message.interestedMessage());
                 os.flush();

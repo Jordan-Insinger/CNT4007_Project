@@ -28,9 +28,11 @@ public class peerProcess {
 
     private Vector<Peer> peersList;
     private Peer currPeer;
+    private MessageLogger messageLogger;
 
     peerProcess(){
         peersList = new Vector<Peer>();
+        messageLogger = new MessageLogger();
     }
 
     void readConfigFile(String filePath) {
@@ -121,7 +123,9 @@ public class peerProcess {
             serverSocket = new ServerSocket(listeningPort);
             while(true){
                 Socket clientSocket = serverSocket.accept();
-                Handler handler = new Handler(clientSocket, currPeer, true);
+                OutputStream os = clientSocket.getOutputStream();
+                InputStream is = clientSocket.getInputStream();
+                Handler handler = new Handler(os, is, currPeer);
                 new Thread(handler).start();
             }
         }catch(IOException e){
@@ -139,16 +143,21 @@ public class peerProcess {
     }
 
     public void connectToLowerPeers(){
+        Socket socket = null;
         for(Peer peer : peersList){
             if(peer.getPeerID() < currPeer.getPeerID()){
                 try{
-                    Socket socket = new Socket("localhost", peer.getListeningPort());
-                    currPeer.setSocket(socket);
-                    Handler handler = new Handler(socket, currPeer, false);
+                    socket = new Socket("localhost", peer.getListeningPort());
+                    OutputStream os = socket.getOutputStream();
+                    InputStream is = socket.getInputStream();
+                    Handler handler = new Handler(os, is, currPeer);
+                    messageLogger.log_TCP_Connection(currPeer.getPeerID(), peer.getPeerID());
                     new Thread(handler).start();
                 }catch(IOException e){
                     System.err.println("Error connecting to " + peer.getPeerID() + " from " + currPeer.getPeerID() + ".");
                     e.printStackTrace();
+                }finally{
+                    //socket.close();
                 }
             }
         }

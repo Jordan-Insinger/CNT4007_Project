@@ -2,6 +2,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 
 public class Message {
     private ByteArrayOutputStream oStream;
@@ -20,10 +21,11 @@ public class Message {
     }
 
      byte[] handshake(int peerID_) throws IOException {
-        byte[] header =  "P2PFILESHARINGPROJ".getBytes();   // 18-byte String
+        byte[] header =  "P2PFILESHARINGPROJ".getBytes(StandardCharsets.UTF_8);   // 18-byte String
         byte[] zeros = new byte[10];    // 10-byte zero bits
         int peerID = peerID_; // 4-byte integer ID
 
+        oStream.reset();
         oStream.write(header);
         oStream.write(zeros);
         byte[] bytes = ByteBuffer.allocate(4).putInt(peerID).array();
@@ -41,6 +43,7 @@ public class Message {
         messageLength = length.array();
 
         try{
+            oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
         }catch(IOException e){
@@ -60,6 +63,7 @@ public class Message {
         messageLength = length.array();        
 
         try{
+            oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
         }
@@ -72,20 +76,15 @@ public class Message {
     }
 
     byte[] interestedMessage() throws IOException {
-        byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
-         
         messageType[0] = 2;
-        length.putInt(messageType.length);
-        messageLength = length.array();
-
-        try 
-        {
+        byte[] messageLength = ByteBuffer.allocate(4).putInt(1).array(); 
+        try{
+            oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
         }
-        catch (IOException e) 
-        {
+        catch(IOException e){
             e.printStackTrace();
         }
             
@@ -126,6 +125,7 @@ public class Message {
         messageLength = length.array();
 
         try{
+            oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
         }catch(IOException e){
@@ -138,21 +138,19 @@ public class Message {
 
     byte[] bitfieldMessage(Peer peer) throws IOException {
         byte[] payload = peer.getBitfield();
-        byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
 
-        messageType[0] = 5;        
-        length.putInt(messageType.length + payload.length);
-        messageLength = length.array();    
+        messageType[0] = 5;  
+        byte[] messageLengthAlt = ByteBuffer.allocate(4).putInt(payload.length + 1).array();              
 
         try{
-            oStream.write(messageLength);
+            oStream.reset();
+            oStream.write(messageLengthAlt);
             oStream.write(messageType);
-            oStream.write(payload);   
+            oStream.write(payload);  
         }catch(IOException e){
             e.printStackTrace();
         }
-
         oStream.close();
         return oStream.toByteArray();
     }
@@ -168,6 +166,7 @@ public class Message {
         messageLength = length.array();
 
         try{
+            oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
             oStream.write(payload);
@@ -190,6 +189,7 @@ public class Message {
         messageLength = length.array();
 
         try{
+            oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
         }catch(IOException e){

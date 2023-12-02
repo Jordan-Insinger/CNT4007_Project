@@ -5,10 +5,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.Vector;
 
 public class MessageLogger {
-    public void log_TCP_Connection(int peerProcessID_1, int peerProcessID_2){ 
-        //pass time value from peerProcess?
+    public void log_TCP_Connection(int peerProcessID_1, int peerProcessID_2){
         String filepath = "./Project/log_peer_" + peerProcessID_1 + ".log";
         String message = "[" + get_Time_String() + "]: Peer " + peerProcessID_1 + " makes a connection to Peer " + peerProcessID_2 + ".";
+        write_Log_Message(filepath, message);
+    }
+
+    public void log_TCP_Connected(int peerProcessID_1, int peerProcessID_2){
+        String filepath = "./Project/log_peer_" + peerProcessID_1 + ".log";
+        String message = "[" + get_Time_String() + "]: Peer " + peerProcessID_1 + " is connected from Peer " + peerProcessID_2 + ".";
         write_Log_Message(filepath, message);
     }
 

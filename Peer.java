@@ -33,35 +33,32 @@ public class Peer{
 
     private Vector<Peer> peerList;
     private Vector<Peer> preferredNeighbors;
+    private Vector<Peer> chokedList;
+    private Vector<Peer> interestedList;
     private Peer currOptimistic;
 
     private int numDownloadedBytes;
     private int bitfieldSize;
 
-    private boolean interested;
-    private boolean choked;
-    private boolean optimisticallyUnchoked;
-
-    private Socket socket;
     private ScheduledExecutorService scheduler;
 
     private Message message;
     private MessageLogger messageLogger;
 
+    private OutputStream os;
+
 
     // Constructor
     public Peer(int peerID) {
         this.peerID = peerID;
-        //peer_bitfields = new Vector<>();
-        interestedPeers = new HashSet<>();
         numDownloadedBytes = 0;
-        interested = false;
-        choked = true;
-        optimisticallyUnchoked = false;
         currOptimistic = null;
         bitfieldSize = (fileSize * pieceSize) / 8;
         message = new Message();
         messageLogger = new MessageLogger();
+        interestedList = new Vector<Peer>();
+        chokedList = new Vector<Peer>();
+        preferredNeighbors = new Vector<Peer>();
     }
 
     // // mark a peer as interested
@@ -102,24 +99,20 @@ public class Peer{
         return numDownloadedBytes;
     }
 
-    public boolean getInterested(){
-        return interested;
-    }
-
-    public boolean getChoked(){
-        return choked;
-    }
-
-    public boolean getOptimisticallyUnchoked(){
-        return optimisticallyUnchoked;
-    }
-
-    public Socket getSocket(){
-        return socket;
-    }
-
     public Vector<Peer> getPeerList(){
         return peerList;
+    }
+
+    public Vector<Peer> getInterestedList(){
+        return interestedList;
+    }
+
+    public Vector<Peer> getChokedList(){
+        return chokedList;
+    }
+
+    public OutputStream getOutputStream(){
+        return os;
     }
 
     //Setters
@@ -138,29 +131,31 @@ public class Peer{
     public void setHasFile(boolean hasFile){
         this.hasFile = hasFile;
     }
-
-    public void setNumDownloaded(int numDownloadedBytes){
-        this.numDownloadedBytes = numDownloadedBytes;
-    }
-
-    public void setInterested(boolean interested){
-        this.interested = interested;
-    }
-
-    public void setChoked(boolean choked){
-        this.choked = choked;
-    }
-
-    public void setSocket(Socket socket){
-        this.socket = socket;
-    }
     
     public void setNeighbors(Vector<Peer> peerList){
         this.peerList = peerList;
+        this.peerList.remove(this);
     }
 
-    public void setOptimisticallyUnchoked(boolean optimisticallyUnchoked){
-        this.optimisticallyUnchoked = optimisticallyUnchoked;
+    public void addInterested(Peer peer){
+        interestedList.add(peer);
+    }
+
+    public void removeInterested(Peer peer){
+        interestedList.remove(peer);
+    }
+
+    public void addChoked(Peer peer){
+        chokedList.add(peer);
+    }
+
+    public void removeChoked(Peer peer){
+        chokedList.remove(peer);
+    }
+
+    public void setOutputStream(OutputStream os, Peer inpeer){
+        int index = peerList.indexOf(inpeer);
+        peerList.get(index).os = os;
     }
 
     public void setGlobalConfig(int NumberOfPreferredNeighbors, int UnchokingInterval, int OptimisticUnchokingInterval, String fileName, int fileSize, int pieceSize){
@@ -261,18 +256,18 @@ public class Peer{
     }
 
     public void reselectPreferred(){
-        Vector<Peer> interestedPeers = new Vector<Peer>();
-        for(int i = 0; i < peerList.size(); i++){
-            Peer curr = peerList.get(i);
-            if(curr.getInterested()){
-                interestedPeers.add(curr);
+        if(interestedList.size() != 0){
+            System.out.print("InterestedList: ");
+            for(Peer temp : interestedList){
+                System.out.print(temp.getPeerID() + " ");
             }
+            System.out.println("\n");
         }
 
-        if(this.hasFile){
-            Collections.shuffle(interestedPeers);
+        if(this.hasFile && interestedList.size() != 0){
+            Collections.shuffle(interestedList);
         }else{
-            Collections.sort(interestedPeers, (peer1,peer2) -> {
+            Collections.sort(interestedList, (peer1,peer2) -> {
                 if(peer1.numDownloadedBytes / UnchokingInterval == peer2.numDownloadedBytes / UnchokingInterval){ //compare download rates
                     if(Math.random() > 0.5){
                         return 1;
@@ -282,68 +277,88 @@ public class Peer{
                     return Double.compare(peer1.numDownloadedBytes / UnchokingInterval, peer2.numDownloadedBytes / UnchokingInterval);
                 }
             });
+            resetBytesDownloaded();
         }
+
+        //System.out.println("After sorting");
 
         Vector<Peer> newPreferredNeighbors = new Vector<Peer>();
         Vector<Peer> compare = preferredNeighbors;
-        try{
-            for(int i = 0; i < Math.min(interestedPeers.size(), NumberOfPreferredNeighbors); i++){
-                Peer curr = interestedPeers.get(i);
-                if(curr.getChoked()){
-                    sendMessage(curr.socket, message.unchokeMessage());
-                    curr.choked = false;
-                    newPreferredNeighbors.add(curr);
-                    preferredNeighbors.remove(curr);
+        for(int i = 0; i < Math.min(interestedList.size(), NumberOfPreferredNeighbors); i++){
+            Peer curr = interestedList.get(i);
+            //System.out.println("curr id: " + curr.getPeerID());
+            if(chokedList.contains(curr)){
+                //System.out.println("check init");
+                try{
+                    int index = peerList.indexOf(curr);
+                    sendMessage(peerList.get(index).getOutputStream(), message.unchokeMessage());
+                }catch(IOException e){
+                    e.printStackTrace();
                 }
+                removeChoked(curr);
             }
-
-            for(int i = 0; i < preferredNeighbors.size(); i++){
-                Peer curr = preferredNeighbors.get(i);
-                if(!curr.optimisticallyUnchoked){
-                    sendMessage(curr.socket, message.chokeMessage());
-                    curr.choked = true;
-                }
-            }
-            boolean changed = !compare.equals(newPreferredNeighbors); //if the new and old are not equal, preferred neighbors changed, update vector send log
-
-            if(changed){
-                preferredNeighbors = newPreferredNeighbors;
-                messageLogger.log_Change_Preferred_Neighbors(peerID, preferredNeighbors);
-            }
-
-            //after calculate new preferred neighbors, reset numBytesDownloaded for next cycle and reselection
-            resetBytesDownloaded();
-        }catch(IOException e){
-            e.printStackTrace();
+            //System.out.println("check");            
+            newPreferredNeighbors.add(curr);
+            compare.remove(curr);
+            //System.out.println("check2");
         }
+        
+
+        //System.out.println("after newPreferredNeighbors loop, ");
+
+        for(int i = 0; i < compare.size(); i++){
+            Peer curr = compare.get(i);
+            if(!curr.equals(currOptimistic) && (chokedList.isEmpty() || !chokedList.contains(curr))){
+                try{
+                    int index = peerList.indexOf(curr);
+                    sendMessage(peerList.get(index).getOutputStream(), message.chokeMessage());
+                }catch(IOException e){
+                    e.printStackTrace();
+                }
+                addChoked(curr);
+            }
+        }
+        boolean changed = false;
+        if(!preferredNeighbors.isEmpty() && !newPreferredNeighbors.isEmpty()){
+            changed = !preferredNeighbors.equals(newPreferredNeighbors); //if the new and old are not equal, preferred neighbors changed, update vector send log
+        }
+
+        if(changed){
+            preferredNeighbors = newPreferredNeighbors;
+            messageLogger.log_Change_Preferred_Neighbors(peerID, preferredNeighbors);
+        }
+
+        System.out.print("Preferred neighbors: ");
+            for(Peer temp : preferredNeighbors){
+                System.out.print(temp.getPeerID() + " ");
+            }
+        System.out.println("\n");
+
+        //after calculate new preferred neighbors, reset numBytesDownloaded for next cycle and reselection
+        resetBytesDownloaded();
     }
 
     public void reselectOptimistic(){
         Vector<Peer> possible = new Vector<Peer>();
         for(int i = 0; i < peerList.size(); i++){
             Peer curr = peerList.get(i);
-            if(curr.interested && curr.choked){
+            if(interestedList.contains(curr) && chokedList.contains(curr)){
                 possible.add(curr);
             }
         }
-
-        Collections.shuffle(possible); //randomize, then pick first index
-
+        System.out.println("fyck");
         try{
-            if(currOptimistic != null){
-                if(possible.size() != 0 && possible.get(0).equals(currOptimistic)){ //if unchanged and no other possible, do nothing and return early
-                    return;
-                }
-                sendMessage(currOptimistic.socket, message.chokeMessage()); //else choke old optimistic peer
-            }
-            if(possible.size() != 0){ //if none possible, optimistic peer not updated
+            if(!possible.isEmpty()){
+                Collections.shuffle(possible); //randomize, then pick first index
                 currOptimistic = possible.get(0);
-                sendMessage(currOptimistic.getSocket(), message.unchokeMessage());
+                System.out.println("New Currently Optimistic " + currOptimistic.getPeerID());
+                sendMessage(currOptimistic.getOutputStream(), message.unchokeMessage());
                 messageLogger.log_Change_Unchoked_Neighbor(peerID, currOptimistic.peerID);
-            }            
+            }          
         }catch(IOException e){
             e.printStackTrace();
         }        
+        System.out.println("\nCurrent optimistically unchoked peer: " + currOptimistic.getPeerID());
     }
 
     void updateBytesDownloaded(int bytesToAdd){
@@ -356,12 +371,10 @@ public class Peer{
         }
     }
 
-    void sendMessage(Socket socket, byte[] message){
+    void sendMessage(OutputStream os, byte[] message){
         try{
-            OutputStream os = socket.getOutputStream();
             os.write(message);
             os.flush();
-            os.close();
         }catch(IOException e){
             System.err.println("Error when printing a choke or unchoke message");
             e.printStackTrace();
