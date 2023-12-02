@@ -79,6 +79,9 @@ public class peerProcess {
                 int booleanValue = Integer.parseInt(tokens[3]);
                 boolean has = (booleanValue == 1);
                 peer.setHasFile(has);
+                if(has){
+                    //peer.setFile(); ///////////adadsad
+                }
 
                 peer.setGlobalConfig(NumberOfPreferredNeighbors, UnchokingInterval, OptimisticUnchokingInterval,
                     FileName, FileSize, PieceSize);

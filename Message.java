@@ -178,12 +178,11 @@ public class Message {
         return oStream.toByteArray();
     }
 
-    byte[] pieceMessage() throws IOException { //todo
+    byte[] pieceMessage(byte[] payload) throws IOException { //todo
         byte[] messageLength = new byte[4];
         byte[] messageType = new byte[1];
          
         messageType[0] = 7;
-        byte[] payload = new byte[4]; // 4-byte piece index field
 
         length.putInt(messageType.length + payload.length);
         messageLength = length.array();
@@ -192,6 +191,7 @@ public class Message {
             oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
+            oStream.write(payload);
         }catch(IOException e){
             e.printStackTrace();
         }

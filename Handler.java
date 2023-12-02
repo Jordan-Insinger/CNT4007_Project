@@ -179,11 +179,11 @@ public class Handler implements Runnable {
 
     private void processUnchoke(){
         System.out.println("Received an unchoke message from peer: " + clientPeer.getPeerID());
+        messageLogger.log_Unchoke(peer.getPeerID(), clientPeer.getPeerID());
                         
         //based on peer bitfield, decide what index to requst and send, might need to adjust, as might not actually need anything if it has the file already
         int indexToRequest = peer.calculateRequest(clientPeer.getBitfield());
         peer.removeChoked(clientPeer);
-        messageLogger.log_Unchoke(peer.getPeerID(), clientPeer.getPeerID());
         try{
             if(indexToRequest != -1){ //if -1, then peer has file already, dont need to request
                 os.write(message.requestMessage(indexToRequest));
@@ -265,10 +265,42 @@ public class Handler implements Runnable {
                 ((payload[1] & 0xFF) << 16) |
                 ((payload[2] & 0xFF) << 8)  |
                 ((payload[3] & 0xFF) << 0);
-        
+        try{
+            if(!peer.getChokedList().contains(clientPeer)){
+                byte[] tosend = peer.getPiece(index);
+                sendMessage(message.pieceMessage(tosend));
+            }
+        }catch(IOException e){
+            e.printStackTrace();
+        }
     }
 
     private void processPiece(byte[] payload){ //todo
         System.out.println("Received a piece message from peer:" + clientPeer.getPeerID());
+        index = ((payload[0] & 0xFF) << 24) | //can probably use a more condensed way to do this
+                ((payload[1] & 0xFF) << 16) |
+                ((payload[2] & 0xFF) << 8)  |
+                ((payload[3] & 0xFF) << 0);
+
+        byte[] pieceArr = new byte[payload.length-4];
+        System.arraycopy(payload, 4, pieceArr, 0, payload.length-4);
+
+        peer.setPiece(index,pieceArr);
+        peer.incrementPieces();
+
+        messageLogger.log_Piece_Downloaded(peer.getPeerID(), clientPeer.getPeerID(), index, peer.getNumPieces());
+        clientPeer.updateBytesDownloaded(payload.length);
+        peer.updateBitfield(index);
+
+        for(int i = 0; i < peer.getPeerList().size(); i++){
+            //send have msg to other peers
+        }
+
+        if(peer.getNumPieces() == peer.fileSize / peer.pieceSize){
+            peer.setHasFile(true);
+            messageLogger.log_Piece_Downloaded(peer.getPeerID(), clientPeer.getPeerID(), index, peer.getNumPieces());
+            peer.downloadFile();
+        }
+
     }
 }

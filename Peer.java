@@ -1,15 +1,17 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.Hashtable;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 public class Peer{
 
     //Common.cfg
@@ -28,6 +30,7 @@ public class Peer{
 
     // Other needed Peer variables
     private byte[] bitfield;
+    private byte[][] file;
     //Vector<Pair<Integer, byte[]>> peer_bitfields; //not sure if this is needed, each Peer has a bitfield variable, and already have peerList
     private Set<Integer> interestedPeers;
 
@@ -38,6 +41,7 @@ public class Peer{
     private Peer currOptimistic;
 
     private int numDownloadedBytes;
+    private int numPieces;
     private int bitfieldSize;
 
     private ScheduledExecutorService scheduler;
@@ -59,6 +63,7 @@ public class Peer{
         interestedList = new Vector<Peer>();
         chokedList = new Vector<Peer>();
         preferredNeighbors = new Vector<Peer>();
+        numPieces = 0;
     }
 
     // // mark a peer as interested
@@ -115,6 +120,14 @@ public class Peer{
         return os;
     }
 
+    public byte[] getPiece(int index){
+        return file[index];
+    }
+
+    public int getNumPieces(){
+        return numPieces;
+    }
+
     //Setters
     public void setPeerID(int peerID){
         this.peerID = peerID;
@@ -151,6 +164,59 @@ public class Peer{
 
     public void removeChoked(Peer peer){
         chokedList.remove(peer);
+    }
+
+    public void setFile(){
+        try{
+            byte[] incoming = Files.readAllBytes(Paths.get("./peer_" + peerID + "/" + fileName));
+            int fileIndex = 0;
+            for(int i = 0; i < incoming.length; i += pieceSize){
+                byte[] pieceBytes = Arrays.copyOfRange(incoming,i,i+pieceSize);
+                file[fileIndex++] = pieceBytes;
+            }     
+        }catch(IOException e){
+            e.printStackTrace();
+        }   
+    }
+
+    public void setPiece(int index, byte[] arr){
+        file[index] = arr;
+    }
+
+    public void incrementPieces(){
+        numPieces++;
+    }
+
+    public void downloadFile(){
+        FileOutputStream fileOutputStream = null;
+        try {
+            File newFile = new File("./peer_"+ peerID);
+            newFile.mkdirs();
+            File fileLoc = new File(newFile, fileName);
+            fileLoc.createNewFile();
+            fileOutputStream = new FileOutputStream(fileLoc);
+
+            for(int i = 0; i < file[i].length; i++){
+                fileOutputStream.write(file[i]);
+            }
+
+        } catch (FileNotFoundException e) {
+            System.out.println("Error saving downloaded file to disk.");
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.out.println("Error writing pieces to file.");
+            e.printStackTrace();
+        } finally {
+            if(fileOutputStream != null) {
+                try {
+                    fileOutputStream.flush();
+                    fileOutputStream.close();
+                } catch(IOException e) {
+                    System.out.println("Error closing file output stream");
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public void setOutputStream(OutputStream os, Peer inpeer){
@@ -318,7 +384,7 @@ public class Peer{
                 addChoked(curr);
             }
         }
-        boolean changed = false;
+        boolean changed = true;
         if(!preferredNeighbors.isEmpty() && !newPreferredNeighbors.isEmpty()){
             changed = !preferredNeighbors.equals(newPreferredNeighbors); //if the new and old are not equal, preferred neighbors changed, update vector send log
         }
@@ -346,7 +412,6 @@ public class Peer{
                 possible.add(curr);
             }
         }
-        System.out.println("fyck");
         try{
             if(!possible.isEmpty()){
                 Collections.shuffle(possible); //randomize, then pick first index
