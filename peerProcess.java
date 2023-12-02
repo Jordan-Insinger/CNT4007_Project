@@ -26,14 +26,12 @@ public class peerProcess {
     private int FileSize;
     private int PieceSize;
 
-    private Hashtable<Integer,Peer> peersList;
-    private Vector<Peer> peersListVec;
+    private Vector<Peer> peersList;
     private Peer currPeer;
     private MessageLogger messageLogger;
 
     peerProcess(){
-        peersList = new Hashtable<Integer,Peer>();
-        peersListVec
+        peersList = new Vector<Peer>();
         messageLogger = new MessageLogger();
     }
 
@@ -93,7 +91,7 @@ public class peerProcess {
                 if(currID == peer.getPeerID()){
                     currPeer = peer;
                 }else{
-                    peersList.put(peer.getPeerID(), peer); //all other peers, excluding current peer with given CLA ID integer
+                    peersList.add(peer); //all other peers, excluding current peer with given CLA ID integer
                 }
             }
         } catch (FileNotFoundException e) {
