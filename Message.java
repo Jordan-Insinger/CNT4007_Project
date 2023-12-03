@@ -103,20 +103,18 @@ public class Message {
         return oStream.toByteArray();
     }
 
-    byte[] haveMessage() throws IOException {
-        byte[] messageLength = new byte[4];
+    byte[] haveMessage(int index) throws IOException {
+        byte[] messageLength = ByteBuffer.allocate(4).putInt(5).array(); 
         byte[] messageType = new byte[1];
          
         messageType[0] = 4;
-        byte[] payload = new byte[4]; // 4-byte piece index field
-
-        length.putInt(messageType.length + payload.length);
-        messageLength = length.array();
+        byte[] payload = ByteBuffer.allocate(4).putInt(index).array(); 
 
         try{
             oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
+            oStream.write(payload);
         }catch(IOException e){
             e.printStackTrace();
         }

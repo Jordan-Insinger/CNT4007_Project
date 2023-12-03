@@ -308,15 +308,24 @@ public class Handler implements Runnable {
         clientPeer.updateBytesDownloaded(payload.length);
         peer.updateBitfield(index);
 
-        for(int i = 0; i < peer.getPeerList().size(); i++){
-            //send have msg to other peers
-        }
+        try{
+            for(Peer curr : peer.getPeerList()){
+                if(curr.getObjectOutputStream() != null){
+                    curr.getObjectOutputStream().writeObject(message.haveMessage(index));
+                    curr.getObjectOutputStream().flush();
+                }
+            }
 
-        if(peer.getNumPieces() == peer.fileSize / peer.pieceSize){
-            peer.setHasFile(true);
-            messageLogger.log_Piece_Downloaded(peer.getPeerID(), clientPeer.getPeerID(), index, peer.getNumPieces());
-            peer.downloadFile();
+            if(peer.getNumPieces() == (int) Math.ceil(peer.fileSize / peer.pieceSize)){
+                peer.setHasFile(true);
+                messageLogger.log_Piece_Downloaded(peer.getPeerID(), clientPeer.getPeerID(), index, peer.getNumPieces());
+                peer.downloadFile();
+            }else{
+                int indexToRequest = peer.calculateRequest(clientPeer.getBitfield());
+                sendMessage(message.requestMessage(indexToRequest));
+            }
+        }catch(IOException e){
+            e.printStackTrace();
         }
-
     }
 }
