@@ -313,14 +313,12 @@ public class Handler implements Runnable {
         try{
             for(Peer curr : peer.getPeerList()){
                 System.out.println(curr.getPeerID() + " : " + curr.getHasFile());
-                if(curr.getObjectOutputStream() != null && curr.getPeerID() != peer.getPeerID() && curr.getHasFileList().contains(curr.getPeerID())){
+                if(curr.getObjectOutputStream() != null && curr.getPeerID() != peer.getPeerID()){
                     System.out.println(curr.getPeerID() + " entered.\n");
                     curr.getObjectOutputStream().writeObject(message.haveMessage(index));
                     curr.getObjectOutputStream().flush();
                 }
             }
-            peer.checkHasFile();
-
             if(peer.getHasFile()){
                 System.out.println("Peer " + peer.getPeerID() + " has downloaded the complete file.");
                 logger.logCompleteDownload(peer.getPeerID());
@@ -328,10 +326,7 @@ public class Handler implements Runnable {
                 clientPeer.removeInterested(clientPeer);
                 clientPeer.removeUnchoked(clientPeer);
                 clientPeer.addChoked(clientPeer);
-                clientPeer.addHasFile(peer);
-                //sendMessage(message.notinterestedMessage());
             }else{
-                //printByteMessage(clientPeer.getBitfield());
                 int indexToRequest = peer.calculateRequest(clientPeer);
                 if(indexToRequest != -1){
                     sendMessage(message.requestMessage(indexToRequest));

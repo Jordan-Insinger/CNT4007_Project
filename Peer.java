@@ -234,7 +234,6 @@ public class Peer{
                 Arrays.fill(piece, (byte) 0);
             }
             inputStream.close();
-            downloadFileToPeer();
         }catch(IOException e){
             e.printStackTrace();
         }   
@@ -281,12 +280,6 @@ public class Peer{
         return true;
     }
 
-    public void checkHasFile(){
-        if(numPieces == targetNumPieces){
-            setHasFile(true);
-        }
-    }
-
     public void setPiece(int index, byte[] arr){
         file[index] = arr;
     }
@@ -322,8 +315,12 @@ public class Peer{
     }
 
     public void updateBitfield(int index){ // called when get 'have' message
-        bitfield.set(index);
+        bitfield.set(index,true);
         bitfieldArr = bitfield.toByteArray();
+        //if all bits up to the target number of pieces are 1, then this peer has the full file
+        if(bitfield.nextClearBit(0) == targetNumPieces){
+            setHasFile(true);
+        }
     }
 
     //https://www.baeldung.com/java-bitset
