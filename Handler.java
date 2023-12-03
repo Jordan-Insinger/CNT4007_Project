@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.StreamCorruptedException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -35,8 +36,11 @@ public class Handler implements Runnable {
     }
 
     public void run(){ //decide what to do based on input bytes
-
-        sendHandshake(); //initial handshake message
+        try{
+            sendMessage(message.handshake(peer.getPeerID())); //initial handshake message
+        }catch(IOException e){
+            e.printStackTrace();
+        }
         receiveHandshake(); //check that return handshake is valid, then sends bitfield
 
         while(!peer.allHaveFile()){ //until confirms that all peers have the file, stay in handler loop
@@ -90,6 +94,9 @@ public class Handler implements Runnable {
                     sendMessage(message.notinterestedMessage());
                     first = false;
                 }
+            }catch(StreamCorruptedException e){
+
+                e.printStackTrace();
             }catch(IOException e) {
                 e.printStackTrace();
             }catch(ClassNotFoundException e){
@@ -122,15 +129,6 @@ public class Handler implements Runnable {
             System.out.print(value + " ");
         }
         System.out.println("");
-    }
-
-    private void sendHandshake(){
-        try{
-            os.writeObject(message.handshake(peer.getPeerID()));
-            os.flush();
-        }catch(IOException e){
-            e.printStackTrace();
-        }
     }
 
     private void receiveHandshake(){
@@ -197,8 +195,7 @@ public class Handler implements Runnable {
             peer.addUnchoked(clientPeer);
             try{
                 if(indexToRequest != -1){
-                    os.writeObject(message.requestMessage(indexToRequest));
-                    os.flush();
+                    sendMessage(message.requestMessage(indexToRequest));
                 }
             }catch(IOException e){
                 e.printStackTrace();
@@ -209,11 +206,6 @@ public class Handler implements Runnable {
     private void processInterested(){
         System.out.println("Received an interested message from peer: " + clientPeer.getPeerID());
         peer.addInterested(clientPeer);
-        Enumeration<Integer> enumeration = peer.getHasFileList().keys();
-        while(enumeration.hasMoreElements()){
-            System.out.print(enumeration.nextElement() + " ");
-        }
-        System.out.println("");
         logger.logInterested(peer.getPeerID(), clientPeer.getPeerID());
     }
 
@@ -235,11 +227,9 @@ public class Handler implements Runnable {
 
         try{
             if(peer.isPeerInterested(clientPeer.getBitfield())){
-                os.writeObject(message.interestedMessage());
-                os.flush();
+                sendMessage(message.interestedMessage());
             }else{
-                os.writeObject(message.notinterestedMessage());
-                os.flush();
+                sendMessage(message.notinterestedMessage());
             }
         }catch(IOException e){
             e.printStackTrace();
@@ -266,13 +256,11 @@ public class Handler implements Runnable {
             //compare bitfields and return result, and send corresponding message
             boolean interested = peer.isPeerInterested(payload);
             System.out.println("Interested? " + interested + "\n");
-            if(interested) {
-                os.writeObject(message.interestedMessage());
-                os.flush();
+            if(interested){
+                sendMessage(message.interestedMessage());
             }else{
-                os.writeObject(message.notinterestedMessage());
-                os.flush();
-            }  
+                sendMessage(message.notinterestedMessage());
+            } 
         }catch(IOException e){
             e.printStackTrace();
         }                      
@@ -315,8 +303,7 @@ public class Handler implements Runnable {
                 System.out.println(curr.getPeerID() + " : " + curr.getHasFile());
                 if(curr.getObjectOutputStream() != null && curr.getPeerID() != peer.getPeerID()){
                     System.out.println(curr.getPeerID() + " entered.\n");
-                    curr.getObjectOutputStream().writeObject(message.haveMessage(index));
-                    curr.getObjectOutputStream().flush();
+                    curr.sendMessage(curr.getObjectOutputStream(), message.haveMessage(index));
                 }
             }
             if(peer.getHasFile()){
