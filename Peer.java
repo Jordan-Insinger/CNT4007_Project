@@ -253,7 +253,7 @@ public class Peer{
 
     // called when get 'have' message
     public void updateBitfield(int index){
-        int bitfieldIndex = (index / 8) - 1;
+        int bitfieldIndex = (index / 8);
         int byteIndex = index % 8;
         this.bitfield[bitfieldIndex] |= 0b1000000 >> byteIndex;
         /*

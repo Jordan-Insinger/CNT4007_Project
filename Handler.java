@@ -37,7 +37,7 @@ public class Handler implements Runnable {
                 printByteMessage(incoming);
 
                 byte[] length = new byte[4];
-                System.arraycopy(incoming, 0, length, index, 4);
+                System.arraycopy(incoming, 0, length, 0, 4);
                 int messageLength = ByteBuffer.wrap(length).order(ByteOrder.BIG_ENDIAN).getInt();
 
                 int messageType = incoming[4];

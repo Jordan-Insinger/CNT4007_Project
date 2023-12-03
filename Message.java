@@ -143,14 +143,12 @@ public class Message {
     }
 
     byte[] requestMessage(int indexToRequest) throws IOException { //todo
-        byte[] messageLength = new byte[4];
-        byte[] messageType = new byte[1];
-         
+        byte[] messageType = new byte[1];         
         messageType[0] = 6;
+        
         byte[] payload = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(indexToRequest).array(); // 4-byte piece index field
 
-        length.putInt(messageType.length + payload.length);
-        messageLength = length.array();
+        byte[] messageLength = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(5).array();
 
         try{
             oStream.reset();
