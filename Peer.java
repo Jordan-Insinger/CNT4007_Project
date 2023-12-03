@@ -162,7 +162,6 @@ public class Peer{
     }
 
     public void setFile(String path){
-        file = new byte[numPieces][];
         try{
             byte[] incoming = Files.readAllBytes(Paths.get(path));
             for(int i = 0, fileIndex = 0; i < incoming.length; i += pieceSize, fileIndex++){
@@ -176,7 +175,8 @@ public class Peer{
     }
 
     public void setPiece(int index, byte[] arr){
-        file[index] = arr;
+        int ind = index / pieceSize;
+        file[ind] = arr;
     }
 
     public void incrementPieces(){
@@ -229,6 +229,7 @@ public class Peer{
         this.pieceSize = pieceSize;
         numPieces = (int) Math.ceil((double)fileSize / pieceSize);
         bitfieldSize = (fileSize / pieceSize) / 8;
+        file = new byte[numPieces][];
     }
 
     public boolean isValidBitfield(byte[] bitfield){ // checks if the bitfield for a peer has any pieces,

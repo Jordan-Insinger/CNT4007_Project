@@ -221,7 +221,7 @@ public class Handler implements Runnable {
     }
 
     private void processHave(byte[] payload){
-        System.out.println("Received a have message from peer:" + clientPeer.getPeerID());
+        System.out.println("Received a have message from peer: " + clientPeer.getPeerID());
         index = ((payload[0] & 0xFF) << 24) |
                 ((payload[1] & 0xFF) << 16) |
                 ((payload[2] & 0xFF) << 8)  |
@@ -244,7 +244,7 @@ public class Handler implements Runnable {
     }
 
     private void processBitfield(byte[] payload){
-        System.out.print("\nReceived a bitfield message from peer " + clientPeer.getPeerID() + ":\n");
+        System.out.print("\nReceived a bitfield message from peer: " + clientPeer.getPeerID() + ":\n");
         for(byte b : payload){
             System.out.print(b);
         }
@@ -276,7 +276,7 @@ public class Handler implements Runnable {
     }
 
     private void processRequest(byte[] payload){ //todo
-        System.out.println("Received a request message from peer:" + clientPeer.getPeerID());
+        System.out.println("Received a request message from peer: " + clientPeer.getPeerID());
         index = ((payload[0] & 0xFF) << 24) | //can probably use a more condensed way to do this
                 ((payload[1] & 0xFF) << 16) |
                 ((payload[2] & 0xFF) << 8)  |
@@ -284,7 +284,7 @@ public class Handler implements Runnable {
         try{
             if(!peer.getChokedList().contains(clientPeer)){
                 byte[] tosend = peer.getPiece(index);
-                sendMessage(message.pieceMessage(tosend));
+                sendMessage(message.pieceMessage(index, tosend));
             }
         }catch(IOException e){
             e.printStackTrace();
@@ -292,12 +292,12 @@ public class Handler implements Runnable {
     }
 
     private void processPiece(byte[] payload){ //todo
-        System.out.println("Received a piece message from peer:" + clientPeer.getPeerID());
+        System.out.println("Received a piece message from peer: " + clientPeer.getPeerID());
         index = ((payload[0] & 0xFF) << 24) | //can probably use a more condensed way to do this
                 ((payload[1] & 0xFF) << 16) |
                 ((payload[2] & 0xFF) << 8)  |
                 ((payload[3] & 0xFF) << 0);
-
+        
         byte[] pieceArr = new byte[payload.length-4];
         System.arraycopy(payload, 4, pieceArr, 0, payload.length-4);
 

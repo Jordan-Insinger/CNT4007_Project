@@ -167,19 +167,17 @@ public class Message {
         return oStream.toByteArray();
     }
 
-    byte[] pieceMessage(byte[] payload) throws IOException { //todo
-        byte[] messageLength = new byte[4];
+    byte[] pieceMessage(int index, byte[] payload) throws IOException { //todo
+        byte[] messageLength = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(5 + payload.length).array(); // 4-byte piece index field
         byte[] messageType = new byte[1];
-         
         messageType[0] = 7;
-
-        length.putInt(messageType.length + payload.length);
-        messageLength = length.array();
+        byte[] indexArr = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(index).array(); // 4-byte piece index field
 
         try{
             oStream.reset();
             oStream.write(messageLength);
             oStream.write(messageType);
+            oStream.write(indexArr);
             oStream.write(payload);
         }catch(IOException e){
             e.printStackTrace();
