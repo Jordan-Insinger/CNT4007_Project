@@ -217,9 +217,7 @@ public class Handler implements Runnable {
     private void processNotInterested(){
         System.out.println("Received a not interested message from peer: " + clientPeer.getPeerID());
         peer.removeInterested(clientPeer);
-        System.out.println("stuck?");
         messageLogger.log_Not_Interested(peer.getPeerID(), clientPeer.getPeerID());
-        System.out.println("PROBLEM");
     }
 
     private void processHave(byte[] payload){

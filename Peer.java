@@ -228,7 +228,7 @@ public class Peer{
         this.fileSize = fileSize;
         this.pieceSize = pieceSize;
         numPieces = (int) Math.ceil((double)fileSize / pieceSize);
-        bitfieldSize = (fileSize * pieceSize) / 8;
+        bitfieldSize = (fileSize / pieceSize) / 8;
     }
 
     public boolean isValidBitfield(byte[] bitfield){ // checks if the bitfield for a peer has any pieces,
@@ -284,7 +284,6 @@ public class Peer{
         if(this.hasFile){
             return -1;
         }
-        System.out.println("Stuff: " + incomingBitfield.length);
         Vector<Integer> indices = new Vector<Integer>();
         for(int i = 0; i < bitfieldSize; i++){
             if(incomingBitfield[i] == 1 && this.bitfield[i] == 0){
@@ -346,7 +345,7 @@ public class Peer{
         //System.out.println("After sorting");
 
         Vector<Peer> preferredNeighbors = new Vector<Peer>();
-        for(int i = 0; i < interested.size(); i++){
+        for(int i = 0; i < Math.min(interested.size(), NumberOfPreferredNeighbors); i++){
             preferredNeighbors.add(interested.get(i));
         }
 
