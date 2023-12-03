@@ -313,7 +313,7 @@ public class Handler implements Runnable {
         try{
             for(Peer curr : peer.getPeerList()){
                 System.out.println(curr.getPeerID() + " : " + curr.getHasFile());
-                if(curr.getObjectOutputStream() != null && curr.getPeerID() != peer.getPeerID() && curr.getHasFileList().contains(curr.getPeerID())){
+                if(curr.getObjectOutputStream() != null && curr.getPeerID() != peer.getPeerID()){
                     System.out.println(curr.getPeerID() + " entered.\n");
                     curr.getObjectOutputStream().writeObject(message.haveMessage(index));
                     curr.getObjectOutputStream().flush();
@@ -329,6 +329,8 @@ public class Handler implements Runnable {
                 clientPeer.removeUnchoked(clientPeer);
                 clientPeer.addChoked(clientPeer);
                 clientPeer.addHasFile(peer);
+                System.out.println("Client Peer looking for file; " + clientPeer.getHasFileList().get(peer.getPeerID()));
+                
                 //sendMessage(message.notinterestedMessage());
             }else{
                 //printByteMessage(clientPeer.getBitfield());
