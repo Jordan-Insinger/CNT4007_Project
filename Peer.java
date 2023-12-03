@@ -284,6 +284,7 @@ public class Peer{
         if(this.hasFile){
             return -1;
         }
+        System.out.println("Stuff: " + incomingBitfield.length);
         Vector<Integer> indices = new Vector<Integer>();
         for(int i = 0; i < bitfieldSize; i++){
             if(incomingBitfield[i] == 1 && this.bitfield[i] == 0){
@@ -405,6 +406,12 @@ public class Peer{
                 removeChoked(curr);
             }
         }
+
+        System.out.println("Preferred Neighbors:");
+        for(int i = 0; i < preferredNeighbors.size(); i++){
+            System.out.print(preferredNeighbors.get(i).getPeerID() + " ");
+        }
+        System.out.println("\n");
 
         //after calculate new preferred neighbors, reset numBytesDownloaded for next cycle and reselection
         resetBytesDownloaded();
