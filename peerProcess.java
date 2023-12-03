@@ -1,19 +1,6 @@
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Hashtable;
 import java.util.Vector;
 import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
 import java.net.ServerSocket;
-import java.net.*;
 import java.io.*;
 import java.lang.Thread;
 
@@ -27,18 +14,24 @@ public class peerProcess {
     private int PieceSize;
 
     private Vector<Peer> peersList;
+    private Vector<Handler> handlerList;
     private Peer currPeer;
-    private MessageLogger messageLogger;
+    private Logger logger;
 
-    peerProcess(){
+    ServerSocket serverSocket;
+
+    public volatile boolean shutdownFlag;
+
+    peerProcess(int peerID){
         peersList = new Vector<Peer>();
-        messageLogger = new MessageLogger();
+        handlerList = new Vector<Handler>();
+        logger = new Logger(peerID);
+        shutdownFlag = false;
     }
 
     void readConfigFile(String filePath) {
 
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-
             String line;
             String[] params = new String[6];
 
@@ -47,7 +40,6 @@ public class peerProcess {
                 // Split the line into words and numbers based on the space character
                 String[] parts = line.split(" ");
                 params[index] = parts[1];
-
                 index++;
             }
             // ===== Initializing global config values ===== //
@@ -57,7 +49,6 @@ public class peerProcess {
             FileName = params[3];
             FileSize = Integer.parseInt(params[4]);
             PieceSize = Integer.parseInt(params[5]);
-
         } catch (IOException e) {
             System.err.println("Error ocurred in readConfigFile()");
             e.printStackTrace();
@@ -67,7 +58,6 @@ public class peerProcess {
     void readPeerInfo(String filepath, int currID) throws IOException {
         try (BufferedReader reader = new BufferedReader(new FileReader(filepath))) {
             String line;
-
             while ((line = reader.readLine()) != null) {
                 // Split the line into words and numbers based on the space character
                 String[] tokens = line.split(" ");
@@ -82,10 +72,10 @@ public class peerProcess {
 
                 peer.setGlobalConfig(NumberOfPreferredNeighbors, UnchokingInterval, OptimisticUnchokingInterval,
                     FileName, FileSize, PieceSize);
-                peer.initializeBitfield(peer.getHasFile());
+                peer.initializeBitfield(has);
 
                 if(has){
-                    peer.setFile("./configFiles/project_config_file_small/project_config_file_small/" + tokens[0] + "/" + FileName);
+                    peer.setFile("./configFiles/project_config_file_large/project_config_file_large/" + tokens[0] + "/" + FileName);
                 }
 
                 if(currID == peer.getPeerID()){
@@ -100,70 +90,59 @@ public class peerProcess {
         }
     }
 
-    // private static void printHandshake(byte[] handshake){ // handles receiving messages from client
-    //     String receivedMessage = new String(handshake, 0, 18);
-    //     int id = ByteBuffer.wrap(handshake, 28, 4).getInt();
-    //     System.out.println("Received Message: " + receivedMessage);
-    //     System.out.println("Received Handshake from client: " + id);
-    // }
-
-    // private static void printByteMessage(byte[] message){
-    //     System.out.println("Printing Byte Message:");
-    //     for (byte value : message) {
-    //         System.out.print((value & 0xFF) + " ");
-    //     }
-    // }
-
-    // private static void getPeerBitfields(Peer peer, peerProcess peerProc) {
-    //     for(int i = 0; i < peerProc.peerList.size(); i++) {
-    //         Pair<Integer, byte[]> pair = new Pair<Integer,byte[]>(peerProc.peerList.get(i).getPeerID(), peerProc.peerList.get(i).getBitfield());
-    //         peer.peer_bitfields.add(pair);
-    //     }
-    // }
-
     public void startServer(int listeningPort){
-        ServerSocket serverSocket = null;
+        serverSocket = null;
         try{
             serverSocket = new ServerSocket(listeningPort);
-            while(true){
+            while(!shutdownFlag){
                 Socket clientSocket = serverSocket.accept();
                 ObjectOutputStream os = new ObjectOutputStream(clientSocket.getOutputStream());
                 ObjectInputStream is = new ObjectInputStream(clientSocket.getInputStream());
-                Handler handler = new Handler(os, is, currPeer);
+                Handler handler = new Handler(clientSocket, os, is, currPeer, this);
+                handlerList.add(handler);
                 new Thread(handler).start();
             }
         }catch(IOException e){
             System.err.println("Error opening server socket on listening port " + listeningPort + ".");
             e.printStackTrace();
-        }//finally{
-            //try{
-                //serverSocket.close();
-                //currPeer.shutdown(); //end choking reselection timers on finish
-            //}catch(){
-                //System.err.println("Problem closing server connection for " + currPeer.getPeerID());
-                //e.printStackTrace();
-            //}
-        //}
+        }
     }
 
     public void connectToLowerPeers(){
         Socket socket = null;
         for(Peer peer : peersList){
+            if(shutdownFlag){
+                break;
+            }
             if(peer.getPeerID() < currPeer.getPeerID()){
                 try{
                     socket = new Socket("localhost", peer.getListeningPort());
                     ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
                     ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
-                    Handler handler = new Handler(os, is, currPeer);
-                    messageLogger.log_TCP_Connection(currPeer.getPeerID(), peer.getPeerID());
+                    Handler handler = new Handler(socket, os, is, currPeer, this);
+                    handlerList.add(handler);
+                    logger.logTCPConnection(currPeer.getPeerID(), peer.getPeerID());
                     new Thread(handler).start();
                 }catch(IOException e){
                     System.err.println("Error connecting to " + peer.getPeerID() + " from " + currPeer.getPeerID() + ".");
                     e.printStackTrace();
-                }finally{
-                    //socket.close();
                 }
             }
+        }
+    }
+
+    public void shutdown(){
+        shutdownFlag = true;
+        System.out.println("Shutting down...");
+        try{
+            if(serverSocket != null && !serverSocket.isClosed()){
+                serverSocket.close();
+            }
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+        for(Handler handler : handlerList){
+            handler.shutdown();
         }
     }
 
@@ -173,14 +152,14 @@ public class peerProcess {
             return;
         }
         // FILEPATHS
-        String configCommon = "./configFiles/project_config_file_small/project_config_file_small/Common.cfg";
-        String configPeerInfo = "./configFiles/project_config_file_small/project_config_file_small/PeerInfo.cfg";
+        String configCommon = "./configFiles/project_config_file_large/project_config_file_large/Common.cfg";
+        String configPeerInfo = "./configFiles/project_config_file_large/project_config_file_large/PeerInfo.cfg";
 
         // String configCommon = "./project_config_file_large/project_config_file_large/Common.cfg";
         // String configPeerInfo = "./project_config_file_large/project_config_file_large/PeerInfo.cfg";
 
         int initiatorID = Integer.parseInt(args[0]);
-        peerProcess peerProc = new peerProcess();
+        peerProcess peerProc = new peerProcess(initiatorID);
 
         //Read required info, set up Peer list with given parameters in peerProcess class
         peerProc.readConfigFile(configCommon);
@@ -199,5 +178,9 @@ public class peerProcess {
 
         //reselect preferred neighbors and optimistically unchoked neighbor every x seconds, parsed in config file
         peerProc.currPeer.setChokeTimers();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            peerProc.shutdown();
+        })); //can end program with Ctrl+C in command line
     }
 }

@@ -6,17 +6,14 @@ import java.nio.charset.StandardCharsets;
 
 public class Message {
     private ByteArrayOutputStream oStream;
-    private ByteBuffer length;
     int peerID;
 
     public Message(){ //empty overloaded constructor, for use in Peer for choke and unchoke messages. 
         oStream = new ByteArrayOutputStream();
-        length = ByteBuffer.allocate(4);
     }
 
     public Message(int peerID){
         oStream = new ByteArrayOutputStream();    // used for byte operations
-        length = ByteBuffer.allocate(4); // 4 bytes allocated for length field in each message except handshake
         this.peerID = peerID;
     }
 
