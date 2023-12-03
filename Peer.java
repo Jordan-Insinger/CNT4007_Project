@@ -31,8 +31,31 @@ public class Peer {
     Vector<Pair<Integer, byte[]>> peer_bitfields;
     private Set<Integer> interestedPeers;
 
+<<<<<<< Updated upstream
     private Vector<Peer> peerList;
     // private Hashtable<Integer,Peer> peerList;
+=======
+    private Vector<Peer>  peerList;
+    private Vector<Peer> prevPreferredNeighbors;
+    private Hashtable<Integer,Peer> chokedList;
+    private Hashtable<Integer,Peer> unchokedList;
+    private Hashtable<Integer,Peer> interestedList;
+    //private Hashtable<Integer,Peer> hasFileList;
+    private Peer currOptimistic;
+
+    private long numDownloadedBytes;
+    private int numPieces;
+    private int targetNumPieces;
+    private int bitfieldSize;
+    private final Object lock = new Object();
+
+    private ScheduledExecutorService scheduler;
+
+    private Message message;
+    private Logger logger;
+
+    private ObjectOutputStream os;
+>>>>>>> Stashed changes
 
     private Peer[] preferredNeighbors;
     // private int _blank_
@@ -192,5 +215,57 @@ public class Peer {
         return false;
     }
 
+<<<<<<< Updated upstream
     // every peer needs the common.cfg settings, run it within each peer?
 }
+=======
+    public void reselectOptimistic(){
+        Vector<Peer> possible = new Vector<Peer>();
+
+        Enumeration<Integer> enumeration = interestedList.keys();
+        while(enumeration.hasMoreElements()){
+            int key = enumeration.nextElement();
+            if(unchokedList.containsKey(key) && interestedList.containsKey(key)){// && hasFileList.containsKey(key)){
+                possible.add(unchokedList.get(key));
+            }
+        }
+
+        try{
+            if(!possible.isEmpty()){
+                Collections.shuffle(possible); //randomize, then pick first index
+                currOptimistic = possible.get(0);
+                //System.out.println("New Currently Optimistic " + currOptimistic.getPeerID());
+                sendMessage(currOptimistic.getObjectOutputStream(), message.unchokeMessage());
+                logger.logChangeUnchokedNeighbor(peerID, currOptimistic.peerID);
+            }          
+        }catch(IOException e){
+            e.printStackTrace();
+        }        
+        //System.out.println("\nCurrent optimistically unchoked peer: " + currOptimistic.getPeerID());
+    }
+
+    void updateBytesDownloaded(int bytesToAdd){
+        numDownloadedBytes += bytesToAdd;
+    }
+
+    void resetBytesDownloaded(){
+        for(Peer peer : peerList){
+            peer.numDownloadedBytes = 0;
+        }
+    }
+
+    void sendMessage(ObjectOutputStream os, byte[] message){
+        synchronized (lock) {
+        try{
+            os.writeObject(message);
+            os.flush();
+        }catch(IOException e){
+            System.err.println("Error when printing a choke or unchoke message");
+            e.printStackTrace();
+        }
+    }
+    }
+
+    /*****************************END CHOKING*************************************/
+}
+>>>>>>> Stashed changes
