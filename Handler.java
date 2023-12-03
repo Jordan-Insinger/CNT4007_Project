@@ -326,6 +326,7 @@ public class Handler implements Runnable {
                 clientPeer.removeInterested(clientPeer);
                 clientPeer.removeUnchoked(clientPeer);
                 clientPeer.addChoked(clientPeer);
+                //sendMessage(message.notinterestedMessage());
             }else{
                 int indexToRequest = peer.calculateRequest(clientPeer);
                 if(indexToRequest != -1){
