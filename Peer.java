@@ -41,7 +41,7 @@ public class Peer{
     private Hashtable<Integer,Peer> chokedList;
     private Hashtable<Integer,Peer> unchokedList;
     private Hashtable<Integer,Peer> interestedList;
-    //private Hashtable<Integer,Peer> hasFileList;
+    private Hashtable<Integer,Peer> hasFileList;
     private Peer currOptimistic;
 
     private long numDownloadedBytes;
@@ -67,7 +67,7 @@ public class Peer{
         interestedList = new Hashtable<Integer,Peer>();
         chokedList = new Hashtable<Integer,Peer>();
         unchokedList = new Hashtable<Integer,Peer>();
-        //hasFileList = new Hashtable<Integer,Peer>();
+        hasFileList = new Hashtable<Integer,Peer>();
         prevPreferredNeighbors = new Vector<Peer>();
         numPieces = 0;
     }
@@ -139,9 +139,9 @@ public class Peer{
         return bitfield;
     }
 
-    // public Hashtable<Integer,Peer> getHasFileList(){
-    //     return hasFileList;
-    // }
+     public Hashtable<Integer,Peer> getHasFileList(){
+         return hasFileList;
+     }
     /*******************************END GETTERS***********************************/
 
 
@@ -165,11 +165,11 @@ public class Peer{
     public void setNeighbors(Vector<Peer> peerList){
         this.peerList = peerList;
         this.peerList.remove(this);
-        // for(Peer curr : this.peerList){
-        //     if(curr.getHasFile()){
-        //         hasFileList.put(curr.getPeerID(), curr);
-        //     }
-        // }
+         for(Peer curr : this.peerList){
+             if(curr.getHasFile()){
+                 hasFileList.put(curr.getPeerID(), curr);
+             }
+         }
     }
 
     public void setOutputStream(ObjectOutputStream os, Peer inpeer){
@@ -204,9 +204,9 @@ public class Peer{
         unchokedList.remove(peer.getPeerID());
     }
 
-    // public void addHasFile(Peer peer){
-    //     hasFileList.put(peer.getPeerID(), peer);
-    // }
+     public void addHasFile(Peer peer){
+         hasFileList.put(peer.getPeerID(), peer);
+     }
 
     public boolean isPeerInterested(byte[] incomingBitfield){
         BitSet bits = BitSet.valueOf(incomingBitfield);
@@ -399,7 +399,7 @@ public class Peer{
         }
 
         for(Peer peer : preferredNeighbors){
-            if(chokedList.containsKey(peer.getPeerID())){// && !hasFileList.containsKey(peer.getPeerID())){
+            if(chokedList.containsKey(peer.getPeerID())&& !hasFileList.containsKey(peer.getPeerID())){
                 try{
                     removeChoked(peer);
                     addUnchoked(peer);
@@ -416,7 +416,7 @@ public class Peer{
             int currID = unchoked.nextElement();
             boolean check = false;
             for(Peer peer : preferredNeighbors){
-                if(peer == unchokedList.get(currID)){// || hasFileList.containsKey(peer.getPeerID())){
+                if(peer == unchokedList.get(currID)|| hasFileList.containsKey(peer.getPeerID())){
                     check = true;
                     break;
                 }
@@ -435,7 +435,7 @@ public class Peer{
 
         for(int i = 0; i < Math.min(interested.size(), NumberOfPreferredNeighbors); i++){
             Peer curr = interested.get(i);
-            if(chokedList.containsKey(curr.getPeerID())){// && !hasFileList.containsKey(curr.getPeerID())){
+            if(chokedList.containsKey(curr.getPeerID()) && !hasFileList.containsKey(curr.getPeerID())){
                 try{
                     int index = peerList.indexOf(curr);
                     sendMessage(peerList.get(index).getObjectOutputStream(), message.unchokeMessage());
@@ -467,7 +467,7 @@ public class Peer{
         Enumeration<Integer> enumeration = interestedList.keys();
         while(enumeration.hasMoreElements()){
             int key = enumeration.nextElement();
-            if(unchokedList.containsKey(key) && interestedList.containsKey(key)){// && hasFileList.containsKey(key)){
+            if(unchokedList.containsKey(key) && interestedList.containsKey(key) && hasFileList.containsKey(key)){
                 possible.add(unchokedList.get(key));
             }
         }
