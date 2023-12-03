@@ -496,7 +496,7 @@ public class Peer{
         }
     }
 
-    void sendMessage(ObjectOutputStream os, byte[] message){
+      void sendMessage(ObjectOutputStream os, byte[] message){
         try{
             os.writeObject(message);
             os.flush();

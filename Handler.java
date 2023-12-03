@@ -96,14 +96,14 @@ public class Handler implements Runnable {
                 }
             } catch (StreamCorruptedException e) {
 
-                e.printStackTrace();
+               
             } catch (IOException e) {
-                e.printStackTrace();
+              
             } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+              
             }
         }
-        peerProc.shutdown();
+         peerProc.shutdown();
     }
 
     public void shutdown() {
@@ -117,7 +117,7 @@ public class Handler implements Runnable {
         }
     }
 
-    private synchronized void sendMessage(byte[] toWrite) throws IOException {
+    private void sendMessage(byte[] toWrite) throws IOException {
         os.writeObject(toWrite);
         os.flush();
     }
