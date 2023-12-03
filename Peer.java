@@ -35,8 +35,9 @@ public class Peer{
     private byte[] bitfield;
     private byte[][] file;
 
-    private Hashtable<Integer,Peer>  peerList;
+    private Vector<Peer>  peerList;
     private Hashtable<Integer,Peer> chokedList;
+    private Hashtable<Integer,Peer> unchokedList;
     private Hashtable<Integer,Peer> interestedList;
     private Peer currOptimistic;
 
@@ -61,6 +62,7 @@ public class Peer{
         messageLogger = new MessageLogger();
         interestedList = new Hashtable<Integer,Peer>();
         chokedList = new Hashtable<Integer,Peer>();
+        unchokedList = new Hashtable<>();
         numPieces = 0;
     }
 
@@ -149,6 +151,14 @@ public class Peer{
 
     public void removeChoked(Peer peer){
         chokedList.remove(peer.getPeerID());
+    }
+
+    public void addUnchoked(Peer peer){
+        unchokedList.put(peer.getPeerID(), peer);
+    }
+
+    public void removeUnchoked(Peer peer){
+        unchokedList.remove(peer.getPeerID());
     }
 
     public void setFile(String path){
@@ -343,9 +353,36 @@ public class Peer{
 
         for(Peer peer : preferredNeighbors){
             if(chokedList.containsKey(peer.getPeerID())){
-                addChoked(peer);
-                int index = peerList.indexOf(curr)
-                sendMessage(, bitfield);
+                try{
+                    removeChoked(peer);
+                    addUnchoked(peer);
+                    int index = peerList.indexOf(peer);
+                    sendMessage(peerList.get(index).getObjectOutputStream(), message.unchokeMessage());
+                }catch(IOException e){
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        Enumeration<Integer> unchoked = unchokedList.keys();
+        while(unchoked.hasMoreElements()){
+            int currID = unchoked.nextElement();
+            boolean check = false;
+            for(Peer peer : preferredNeighbors){
+                if(peer == unchokedList.get(currID)){
+                    check = true;
+                    break;
+                }
+            }
+
+            if(check == false){
+                try{
+                    sendMessage(unchokedList.get(currID).getObjectOutputStream(), message.chokeMessage());
+                    addChoked(unchokedList.get(currID));
+                    removeInterested(unchokedList.get(currID));
+                }catch(IOException e){
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -366,62 +403,8 @@ public class Peer{
                     e.printStackTrace();
                 }
                 removeChoked(curr);
-            }    
-            newPreferredNeighbors.put(curr.getPeerID(),curr);
-            compare.remove(curr.getPeerID());
-
-            //System.out.println("check2");
-        }
-
-        //System.out.println("after newPreferredNeighbors loop, compare size:" + compare.size());
-        // for(Peer peer : compare){
-        //     System.out.print(peer.getPeerID() + " ");
-        // }
-
-        Enumeration<Integer> chokeEnumeration = compare.keys();
-        while(chokeEnumeration.hasMoreElements()){ 
-            Peer curr = compare.get(chokeEnumeration.nextElement());
-            if(!curr.equals(currOptimistic)){
-                try{
-                    int index = peerList.indexOf(curr);
-                    sendMessage(peerList.get(index).getObjectOutputStream(), message.chokeMessage());
-                }catch(IOException e){
-                    e.printStackTrace();
-                }
-                addChoked(curr);
             }
         }
-
-        // for(int i = 0; i < compare.size(); i++){
-        //     Peer curr = compare.get(i);
-        //     if(!curr.equals(currOptimistic)){
-        //         try{
-        //             int index = peerList.indexOf(curr);
-        //             sendMessage(peerList.get(index).getObjectOutputStream(), message.chokeMessage());
-        //         }catch(IOException e){
-        //             e.printStackTrace();
-        //         }
-        //         addChoked(curr);
-        //     }
-        // }
-        
-        Enumeration<Integer> checkChange = newPreferredNeighbors.keys();
-        while(checkChange.hasMoreElements()){
-            int num = checkChange.nextElement();
-            if(!preferredNeighbors.containsKey(num)){
-                preferredNeighbors.putAll(newPreferredNeighbors);
-                messageLogger.log_Change_Preferred_Neighbors(peerID, preferredNeighbors);
-                break;
-            }
-        }
-
-
-        Enumeration<Integer> printPreferred = preferredNeighbors.keys();
-        System.out.println("Preferred neighbors:");
-        while(printPreferred.hasMoreElements()){
-            System.out.print(printPreferred.nextElement() + " ");
-        }
-        System.out.println("\n");
 
         //after calculate new preferred neighbors, reset numBytesDownloaded for next cycle and reselection
         resetBytesDownloaded();
@@ -463,7 +446,6 @@ public class Peer{
         try{
             os.writeObject(message);
             os.flush();
-            System.out.println("Sent choke or unchoke?");
         }catch(IOException e){
             System.err.println("Error when printing a choke or unchoke message");
             e.printStackTrace();

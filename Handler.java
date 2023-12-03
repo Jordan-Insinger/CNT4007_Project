@@ -186,6 +186,7 @@ public class Handler implements Runnable {
     private void processChoke(){
         System.out.println("Received a choke message from peer: " + clientPeer.getPeerID());
         peer.addChoked(clientPeer); //todo, where to actually do this
+        peer.removeUnchoked(clientPeer);
         messageLogger.log_Choke(peer.getPeerID(), clientPeer.getPeerID());
     }
 
@@ -196,6 +197,7 @@ public class Handler implements Runnable {
         //based on peer bitfield, decide what index to requst and send, might need to adjust, as might not actually need anything if it has the file already
         int indexToRequest = peer.calculateRequest(clientPeer.getBitfield());
         peer.removeChoked(clientPeer);
+        peer.addUnchoked(clientPeer);
         try{
             if(indexToRequest != -1){ //if -1, then peer has file already, dont need to request
                 os.writeObject(message.requestMessage(indexToRequest));
