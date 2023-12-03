@@ -13,6 +13,8 @@ public class peerProcess {
     private int FileSize;
     private int PieceSize;
 
+    private int initiator;
+
     private Vector<Peer> peersList;
     private Vector<Handler> handlerList;
     private Peer currPeer;
@@ -27,6 +29,7 @@ public class peerProcess {
         handlerList = new Vector<Handler>();
         logger = new Logger(peerID);
         shutdownFlag = false;
+        initiator = peerID;
     }
 
     void readConfigFile(String filePath) {
@@ -76,6 +79,9 @@ public class peerProcess {
 
                 if(has){
                     peer.setFile("./configFiles/project_config_file_large/project_config_file_large/" + tokens[0] + "/" + FileName);
+                    if(peer.getPeerID() == initiator){
+                        peer.downloadFileToPeer();
+                    }
                 }
 
                 if(currID == peer.getPeerID()){
