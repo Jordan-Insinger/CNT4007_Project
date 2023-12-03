@@ -34,7 +34,7 @@ public class Handler implements Runnable {
         while(!peer.allHaveFile()){ //until confirms that all peers have the file, stay in handler loop
             try{         
                 byte[] incoming = (byte[]) is.readObject();
-                printByteMessage(incoming);
+                //printByteMessage(incoming);
 
                 byte[] length = new byte[4];
                 System.arraycopy(incoming, 0, length, 0, 4);
@@ -160,27 +160,28 @@ public class Handler implements Runnable {
             ((incomingHandshake[31] & 0xFF) << 0);
 
         //if incoming handshake is valid, send bitfield back
-        if(getPeerFromID(incomingPeerID) == 1 && incomingHeader.equals("P2PFILESHARINGPROJ")){
+        if(getPeerFromID(incomingPeerID) && incomingHeader.equals("P2PFILESHARINGPROJ")){
             messageLogger.log_TCP_Connected(peer.getPeerID(), clientPeer.getPeerID());
             peer.addChoked(clientPeer);
             peer.setOutputStream(os, clientPeer);
             try{
-                sendMessage(message.bitfieldMessage(peer));   
-                
+                if(peer.isValidBitfield(peer.getBitfield())){
+                    sendMessage(message.bitfieldMessage(peer));   
+                }                
             }catch(IOException e){
                 e.printStackTrace();
             }         
         }
     }
 
-    private int getPeerFromID(int incomingID){
-        for(Peer peer : peer.getPeerList()){
-            if(peer.getPeerID() == incomingID){
-                clientPeer = peer;
-                return 1;
+    private boolean getPeerFromID(int incomingID){
+        for(Peer inpeer : peer.getPeerList()){
+            if(inpeer.getPeerID() == incomingID){
+                clientPeer = inpeer;
+                return true;
             }
         }
-        return -1;
+        return false;
     }
 
     private void processChoke(){
@@ -195,16 +196,20 @@ public class Handler implements Runnable {
         messageLogger.log_Unchoke(peer.getPeerID(), clientPeer.getPeerID());
                         
         //based on peer bitfield, decide what index to requst and send, might need to adjust, as might not actually need anything if it has the file already
-        int indexToRequest = peer.calculateRequest(clientPeer.getBitfield());
-        peer.removeChoked(clientPeer);
-        peer.addUnchoked(clientPeer);
-        try{
-            if(indexToRequest != -1){ //if -1, then peer has file already, dont need to request
-                os.writeObject(message.requestMessage(indexToRequest));
-                os.flush();
+        if(!peer.getHasFile()){
+            int indexToRequest = peer.calculateRequest(clientPeer);
+            printByteMessage(clientPeer.getBitfield());
+            System.out.println(indexToRequest);
+            peer.removeChoked(clientPeer);
+            peer.addUnchoked(clientPeer);
+            try{
+                if(indexToRequest != -1){
+                    os.writeObject(message.requestMessage(indexToRequest));
+                    os.flush();
+                }
+            }catch(IOException e){
+                e.printStackTrace();
             }
-        }catch(IOException e){
-            e.printStackTrace();
         }
     }
 
@@ -244,7 +249,7 @@ public class Handler implements Runnable {
     }
 
     private void processBitfield(byte[] payload){
-        System.out.print("\nReceived a bitfield message from peer: " + clientPeer.getPeerID() + ":\n");
+        System.out.print("\nReceived a bitfield message from peer: " + clientPeer.getPeerID() + "\n");
         for(byte b : payload){
             System.out.print(b);
         }
@@ -302,27 +307,29 @@ public class Handler implements Runnable {
         System.arraycopy(payload, 4, pieceArr, 0, payload.length-4);
 
         peer.setPiece(index,pieceArr);
+        peer.updateBitfield(index);
         peer.incrementPieces();
 
         messageLogger.log_Piece_Downloaded(peer.getPeerID(), clientPeer.getPeerID(), index, peer.getNumPieces());
         clientPeer.updateBytesDownloaded(payload.length);
-        peer.updateBitfield(index);
 
         try{
             for(Peer curr : peer.getPeerList()){
-                if(curr.getObjectOutputStream() != null){
+                if(curr.getObjectOutputStream() != null && curr.getPeerID() != clientPeer.getPeerID()){
                     curr.getObjectOutputStream().writeObject(message.haveMessage(index));
                     curr.getObjectOutputStream().flush();
                 }
             }
+            peer.checkHasFile();
 
-            if(peer.getNumPieces() == (int) Math.ceil(peer.fileSize / peer.pieceSize)){
-                peer.setHasFile(true);
-                messageLogger.log_Piece_Downloaded(peer.getPeerID(), clientPeer.getPeerID(), index, peer.getNumPieces());
+            if(peer.getHasFile()){
+                messageLogger.log_Complete_Download(peer.getPeerID());
                 peer.downloadFile();
             }else{
-                int indexToRequest = peer.calculateRequest(clientPeer.getBitfield());
-                sendMessage(message.requestMessage(indexToRequest));
+                int indexToRequest = peer.calculateRequest(clientPeer);
+                if(indexToRequest != -1){
+                    sendMessage(message.requestMessage(indexToRequest));
+                }
             }
         }catch(IOException e){
             e.printStackTrace();

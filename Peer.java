@@ -3,9 +3,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Set;
+import java.util.BitSet;
 import java.util.Vector;
 import java.util.Enumeration;
 import java.util.concurrent.Executors;
@@ -14,7 +15,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
-import java.util.Map;
 public class Peer{
 
     //Common.cfg
@@ -32,7 +32,8 @@ public class Peer{
     private boolean hasFile;
 
     // Other needed Peer variables
-    private byte[] bitfield;
+    private BitSet bitfield;
+    private byte[] bitfieldArr;
     private byte[][] file;
 
     private Vector<Peer>  peerList;
@@ -43,6 +44,7 @@ public class Peer{
 
     private int numDownloadedBytes;
     private int numPieces;
+    private int targetNumPieces;
     private int bitfieldSize;
 
     private ScheduledExecutorService scheduler;
@@ -84,7 +86,7 @@ public class Peer{
     }
 
     public byte[] getBitfield(){
-        return bitfield;
+        return bitfieldArr;
     }
 
     public int getNumDownloaded(){
@@ -113,6 +115,10 @@ public class Peer{
 
     public int getNumPieces(){
         return numPieces;
+    }
+
+    public BitSet getBitFieldBitSet(){
+        return bitfield;
     }
 
     //Setters
@@ -165,7 +171,7 @@ public class Peer{
         try{
             byte[] incoming = Files.readAllBytes(Paths.get(path));
             for(int i = 0, fileIndex = 0; i < incoming.length; i += pieceSize, fileIndex++){
-                byte piece[] = Arrays.copyOfRange(incoming,i,i+pieceSize);
+                byte[] piece = Arrays.copyOfRange(incoming,i,i+pieceSize);
                 file[fileIndex] = piece;
             }     
             downloadFile();
@@ -174,13 +180,10 @@ public class Peer{
         }   
     }
 
-    public void setPiece(int index, byte[] arr){
-        int ind = index / pieceSize;
-        file[ind] = arr;
-    }
-
-    public void incrementPieces(){
-        numPieces++;
+    public void checkHasFile(){
+        if(numPieces == targetNumPieces){
+            setHasFile(true);
+        }
     }
 
     public void downloadFile(){
@@ -227,9 +230,11 @@ public class Peer{
         this.fileName = fileName;
         this.fileSize = fileSize;
         this.pieceSize = pieceSize;
-        numPieces = (int) Math.ceil((double)fileSize / pieceSize);
+        targetNumPieces = (int) Math.ceil((double)fileSize / pieceSize);
         bitfieldSize = (fileSize / pieceSize) / 8;
-        file = new byte[numPieces][];
+        file = new byte[targetNumPieces][];
+        bitfield = new BitSet(numPieces);
+        bitfieldArr = new byte[bitfieldSize];
     }
 
     public boolean isValidBitfield(byte[] bitfield){ // checks if the bitfield for a peer has any pieces,
@@ -242,20 +247,34 @@ public class Peer{
     }
 
     public void initializeBitfield(boolean hasFile){
-        this.bitfield = new byte[(fileSize / pieceSize) / 8];  // sets all bytes to 0
+        //bitfield.set(0, bitfieldSize*8, false);
+        //bitfield = new byte[bitfieldSize];  // sets all bytes to 0
 
-        if(this.hasFile){   // if has file, set all bytes in bitfield to 1
-            for(int i = 0; i < this.bitfield.length; i++){
-                this.bitfield[i] = (byte) 0x01;
-            }
+        if(hasFile){   // if has file, set all bits in bitfield to 1
+            bitfield.set(0, bitfieldSize*8, true);
+        }else{
+            bitfield.set(0, bitfieldSize*8, false);
         }
+        bitfieldArr = bitfield.toByteArray();
     }
 
     // called when get 'have' message
     public void updateBitfield(int index){
-        int bitfieldIndex = (index / 8);
-        int byteIndex = index % 8;
-        this.bitfield[bitfieldIndex] |= 0b1000000 >> byteIndex;
+        //System.out.println("Incoming index to updateBitfield: " + index);
+        // int bitfieldIndex = (index / pieceSize);
+        // //System.out.println("bitfield index: " + bitfieldIndex);
+        // //System.out.println("Bitfield byte at that index: ");
+        // byte test = bitfield[bitfieldIndex];
+        // //System.out.println(test);
+        // int byteIndex = index % 8;
+        // //System.out.println("byteIndex:" + byteIndex);
+        // this.bitfield[bitfieldIndex] |= 0b1000000 >> byteIndex;
+
+        bitfield.set(index);
+        bitfieldArr = bitfield.toByteArray();
+
+
+        //System.out.println("new byte at that bitfield index:" + bitfield[bitfieldIndex]);
         /*
         update given piece bit, start from the left
         0000 1100 0101 1100
@@ -267,30 +286,46 @@ public class Peer{
         0101 1100 | 0010000 = 0111 0000
         */
     }
+    
+    public void setPiece(int index, byte[] arr){
+        int ind = index / pieceSize;
+        file[ind] = arr;
+    }
+
+    public void incrementPieces(){
+        numPieces++;
+    }
 
     //return true if this peer is interested in the pieces the incoming peer has
     public boolean isPeerInterested(byte[] incomingBitfield){
-        //if bitfields are the same, dont need to do any calculation
-        if(!incomingBitfield.equals(this.bitfield)){
-            for(int i = 0; i < this.bitfield.length; i++){
-                if(incomingBitfield[i] > this.bitfield[i]){
-                    return true;
-                }
+        for(int i = 0; i < bitfieldSize; i++){
+            if(incomingBitfield[i] > bitfieldArr[i]){
+                return true;
             }
         }
         return false;
     }
 
-    public int calculateRequest(byte[] incomingBitfield){
-        if(this.hasFile){
+    //https://www.baeldung.com/java-bitset
+    //using bitset to compare bitfields
+    public int calculateRequest(Peer inpeer){
+        Vector<Integer> indices = new Vector<Integer>();
+
+        BitSet copy = (BitSet) bitfield.clone();
+        BitSet temp = inpeer.getBitFieldBitSet();
+        copy.flip(0,numPieces);
+        copy.and(temp);
+
+        for(int i = 0; i < bitfieldSize*8; i++){
+            if(copy.get(i) == true){
+                 indices.add(i);
+             }
+        }
+
+        if(indices.isEmpty()){
             return -1;
         }
-        Vector<Integer> indices = new Vector<Integer>();
-        for(int i = 0; i < bitfieldSize; i++){
-            if(incomingBitfield[i] == 1 && this.bitfield[i] == 0){
-                indices.add(i);
-            }
-        }
+
         Collections.shuffle(indices);
         return indices.get(0);
     }
@@ -386,7 +421,6 @@ public class Peer{
                 }
             }
         }
-
 
         for(int i = 0; i < Math.min(interested.size(), NumberOfPreferredNeighbors); i++){
             Peer curr = interested.get(i);
