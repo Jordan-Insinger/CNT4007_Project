@@ -43,8 +43,12 @@ public class Handler implements Runnable {
         }
         receiveHandshake(); //check that return handshake is valid, then sends bitfield
 
-        while(!peer.allHaveFile()){ //until confirms that all peers have the file, stay in handler loop
-            try{         
+        while(true){ //until confirms that all peers have the file, stay in handler loop
+            if(peer.allHaveFile()){
+                shutdown();
+                break;
+            }
+            try{    
                 byte[] incoming = (byte[]) is.readObject();
                 //printByteMessage(incoming);
 
@@ -55,7 +59,7 @@ public class Handler implements Runnable {
                 int messageType = incoming[4];
 
                 byte[] payload;
-                if(messageLength != 1){
+                if(messageLength > 1){
                     payload = new byte[messageLength-1];
                     System.arraycopy(incoming, 5, payload, 0, messageLength-1);
                 }else{
@@ -95,15 +99,14 @@ public class Handler implements Runnable {
                     first = false;
                 }
             }catch(StreamCorruptedException e){
-
-                e.printStackTrace();
             }catch(IOException e) {
-                e.printStackTrace();
-            }catch(ClassNotFoundException e){
-               e.printStackTrace();
-            }
+                if(peer.allHaveFile()){
+                    shutdown();
+                    break;
+                }
+            }catch(ClassNotFoundException e)
+            {}
         }
-        peerProc.shutdown();
     }
 
     public void shutdown(){
@@ -111,7 +114,9 @@ public class Handler implements Runnable {
             is.close();
             os.close();
             socket.close();
+            peerProc.shutdown();
             peer.shutdown();
+            System.exit(0);
         }catch(IOException e){
             e.printStackTrace();
         }
