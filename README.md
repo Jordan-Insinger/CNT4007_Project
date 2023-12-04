@@ -5,7 +5,7 @@
 
 ID: 79229157 - Brayden Bevels: Reselecting preferred neighbors and the optimistically unchoked peer. Logger class for logging Peer processes to a log file. Have, request, and piece message sending and parsing.
 
-ID: Jordan Insinger:  Current Peer and neighbor peer current progress upkeep using bitfields. File reading and writing. Created tcp connection bewteen peers.
+ID: 65732071 - Jordan Insinger:  Current Peer and neighbor peer current progress upkeep using bitfields. File reading and writing. Created tcp connection bewteen peers.
 
 ID: 52175756 - Seth Raber - I worked discussing how the function worked properly but worked specifically on the interested functions helped with the interested functions specifically as well as worked on the messages for the log.
 
