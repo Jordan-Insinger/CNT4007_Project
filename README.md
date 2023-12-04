@@ -13,7 +13,7 @@ ID: 52175756 - Seth Raber - I worked discussing how the function worked properly
 
 
 ## What we Achieved:    
- Markup : 
+
 * All required messages and their handling are receieved and sent correctly.  
 * All files get downloaded to their respective folders with no loss of data along with a log file that displays every received message and the progress of the file being sent over the TCP connection.  
 * Each peer connects to all peers with ID's less than the current peer, and all config is read from a given config file along with the file to send.  
