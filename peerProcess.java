@@ -78,7 +78,7 @@ public class peerProcess {
                 peer.initializeBitfield(has);
 
                 if(has){
-                    peer.setFile("./configFiles/project_config_file_large/project_config_file_large/" + tokens[0] + "/" + FileName);
+                    peer.setFile("./configFiles/project_config_file_small/project_config_file_small/" + tokens[0] + "/" + FileName);
                     if(peer.getPeerID() == initiator){
                         peer.downloadFileToPeer();
                     }
@@ -164,8 +164,8 @@ public class peerProcess {
             return;
         }
         // FILEPATHS
-        String configCommon = "./configFiles/project_config_file_large/project_config_file_large/Common.cfg";
-        String configPeerInfo = "./configFiles/project_config_file_large/project_config_file_large/PeerInfo.cfg";
+        String configCommon = "./configFiles/project_config_file_small/project_config_file_small/Common.cfg";
+        String configPeerInfo = "./configFiles/project_config_file_small/project_config_file_small/PeerInfo.cfg";
 
         // String configCommon = "./project_config_file_large/project_config_file_large/Common.cfg";
         // String configPeerInfo = "./project_config_file_large/project_config_file_large/PeerInfo.cfg";

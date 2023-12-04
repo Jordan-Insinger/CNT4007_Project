@@ -273,10 +273,13 @@ public class Handler implements Runnable {
 
     private void processRequest(byte[] payload){ //todo
         System.out.println("Received a request message from peer: " + clientPeer.getPeerID());
+        
         index = ((payload[0] & 0xFF) << 24) | //can probably use a more condensed way to do this
                 ((payload[1] & 0xFF) << 16) |
                 ((payload[2] & 0xFF) << 8)  |
                 ((payload[3] & 0xFF) << 0);
+
+        logger.logRequest(peer.getPeerID(), clientPeer.getPeerID(), index);
         try{
             if(!peer.getChokedList().contains(clientPeer)){
                 byte[] tosend = peer.getPiece(index);
