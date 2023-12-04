@@ -51,7 +51,12 @@ public class Logger{
     }
 
     public void logChoked(int peerProcessID_Choked, int peerProcessID_Chokes){
-        String message = "[" + getTimeString() + "]: Peer " + peerProcessID_Choked + " is unchoked by " + peerProcessID_Chokes + ".";
+        String message = "[" + getTimeString() + "]: Peer " + peerProcessID_Choked + " is choked by " + peerProcessID_Chokes + ".";
+        writeLogMessage(message);
+    }
+
+    public void logRequest(int peerProcessID_1, int peerProcessID_2, int index){
+        String message = "[" + getTimeString() + "]: Peer " + peerProcessID_1 + " receives request for index " + index + " from " + peerProcessID_2 + ".";
         writeLogMessage(message);
     }
 
