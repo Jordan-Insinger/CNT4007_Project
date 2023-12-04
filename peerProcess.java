@@ -109,8 +109,14 @@ public class peerProcess {
                 new Thread(handler).start();
             }
         }catch(IOException e){
-            System.err.println("Error opening server socket on listening port " + listeningPort + ".");
-            e.printStackTrace();
+            //System.err.println("Error opening server socket on listening port " + listeningPort + ".");
+            //e.printStackTrace();
+        }finally{
+            try{
+                serverSocket.close();
+            }catch(IOException e){
+                e.printStackTrace();
+            }
         }
     }
 
