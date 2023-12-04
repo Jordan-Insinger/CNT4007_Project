@@ -128,7 +128,7 @@ public class peerProcess {
             }
             if(peer.getPeerID() < currPeer.getPeerID()){
                 try{
-                    socket = new Socket("localhost", peer.getListeningPort());
+                    socket = new Socket(peer.getHostName(), peer.getListeningPort());
                     ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
                     ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
                     Handler handler = new Handler(socket, os, is, currPeer, this);
