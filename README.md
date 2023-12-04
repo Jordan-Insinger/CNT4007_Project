@@ -3,7 +3,7 @@ Read Me File:
 Group Number:  54
 Team Members + Contributions:
 
-ID: Brayden Bevels: Reselecting preferred neighbors and the optimistically unchoked peer. Logger class for logging Peer processes to a log file. Have, request, and piece message sending and parsing. Current Peer and neighbor peer bitfield upkeep using bitfields. File reading and writing.
+ID: 79229157 - Brayden Bevels: Reselecting preferred neighbors and the optimistically unchoked peer. Logger class for logging Peer processes to a log file. Have, request, and piece message sending and parsing. Current Peer and neighbor peer bitfield upkeep using bitfields. File reading and writing.
 
 ID: Jordan Insinger:
 
