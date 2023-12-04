@@ -28,4 +28,4 @@ Follow steps in order:
 1. “tar -xvf 54.tar”  - to unzip the file to the folder named "54".
 2. "cd ./54" - to move to root project directory 
 3. “javac *.java” - to compile all needed java files
-4. “Java peerProcess [PEER_ID]” - Will run a file using our peerProcess implementation. By default, it reads from the folder at "./configFiles/project_config_file_small/project_config_file_small." This path can be changed, but new directories with Peer information and configurations must be structured like below:
+4. “Java peerProcess [PEER_ID]” - Will run a file using our peerProcess implementation. By default, it reads from the folder at "./configFiles/project_config_file_small/project_config_file_small."
