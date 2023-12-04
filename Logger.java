@@ -44,6 +44,10 @@ public class Logger{
         String message = "[" + getTimeString() + "]: Peer " + peerProcessID_1 + " has the optimistically unchoked neighbor " + peerProcessID_2 + ".";
         writeLogMessage(message);
     }
+    public void logBitfield(int peerProcessID_1, int peerProcessID_2) {
+        String message = "[" + getTimeString() + "]: Peer " + peerProcessID_1 + " received a bitfield from " + peerProcessID_2 + ".";
+        writeLogMessage(message);
+    }
 
     public void logUnchoked(int peerProcessID_Unchoked, int peerProcessID_Unchokes){
         String message = "[" + getTimeString() + "]: Peer " + peerProcessID_Unchoked + " is unchoked by " + peerProcessID_Unchokes + ".";

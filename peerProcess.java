@@ -143,6 +143,7 @@ public class peerProcess {
         try{
             if(serverSocket != null && !serverSocket.isClosed()){
                 serverSocket.close();
+                System.exit(0);
             }
         }catch(IOException e){
             e.printStackTrace();
@@ -184,7 +185,6 @@ public class peerProcess {
 
         //reselect preferred neighbors and optimistically unchoked neighbor every x seconds, parsed in config file
         peerProc.currPeer.setChokeTimers();
-
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             peerProc.shutdown();
         })); //can end program with Ctrl+C in command line

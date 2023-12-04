@@ -103,7 +103,8 @@ public class Handler implements Runnable {
               
             }
         }
-         peerProc.shutdown();
+        System.exit(0);
+        peerProc.shutdown();
     }
 
     public void shutdown() {
@@ -252,6 +253,7 @@ public class Handler implements Runnable {
         System.out.println("");
 
         clientPeer.initializeBitfield(clientPeer.getHasFile());
+        logger.logBitfield(peer.getPeerID(), clientPeer.getPeerID());
 
         try {
             // compare bitfields and return result, and send corresponding message
