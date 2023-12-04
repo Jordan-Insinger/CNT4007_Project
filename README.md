@@ -7,7 +7,7 @@ ID: 79229157 - Brayden Bevels: Reselecting preferred neighbors and the optimisti
 
 ID: 65732071 - Jordan Insinger:  Current Peer and neighbor peer current progress upkeep using bitfields. File reading and writing. Created tcp connection bewteen peers.
 
-ID: 52175756 - Seth Raber - Helped a bit with midpoint submission.
+ID: 52175756 - Seth Raber - Helped with structure behind the project and debugging.
 
  ## Video:
  Sent via canvas.
