@@ -7,9 +7,10 @@ ID: 79229157 - Brayden Bevels: Reselecting preferred neighbors and the optimisti
 
 ID: 65732071 - Jordan Insinger:  Current Peer and neighbor peer current progress upkeep using bitfields. File reading and writing. Created tcp connection bewteen peers.
 
-ID: 52175756 - Seth Raber - I worked discussing how the function worked properly but worked specifically on the interested functions helped with the interested functions specifically as well as worked on the messages for the log.
+ID: 52175756 - Seth Raber - Helped a bit with midpoint submission.
 
- ## Youtube Video:
+ ## Video:
+ Sent via canvas.
 
 
 ## What we Achieved:    
